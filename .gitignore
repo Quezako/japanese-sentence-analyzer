@@ -3,8 +3,7 @@ __pycache__/
 *.pyc
 
 # Generated outputs
-sentences-with-levels.csv
-sentences-with-levels-*.csv
+output/
 
 # OS/editor
 .DS_Store

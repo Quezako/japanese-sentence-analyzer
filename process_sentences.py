@@ -32,6 +32,29 @@ def load_level_map(file_path, key_column):
     return mapping
 
 
+def load_pedagogical_map(file_path):
+    """
+    Load pedagogical vocabulary map: words whose 'real-world' JLPT level
+    is lower (easier) than what the official dataset says.
+    Returns dict: word -> (level, source)
+    Only entries where level is valid N1-N5 are kept.
+    """
+    if not os.path.exists(file_path):
+        return {}
+    df = pd.read_csv(file_path, sep='|', dtype=str).fillna('')
+    if 'word' not in df.columns or 'jlpt_level' not in df.columns:
+        return {}
+    mapping = {}
+    for _, row in df.iterrows():
+        key = str(row['word']).strip()
+        level = str(row['jlpt_level']).strip().upper()
+        source = str(row.get('source', 'pedagogical')).strip() if 'source' in df.columns else 'pedagogical'
+        if not key or level not in {'N1', 'N2', 'N3', 'N4', 'N5'}:
+            continue
+        mapping[key] = (level, source)
+    return mapping
+
+
 def load_grammar_patterns(primary_file, fallback_file='grammar_patterns.csv'):
     frames = []
 
@@ -182,6 +205,76 @@ def analyze_vocabulary(sentence, vocab_map):
     details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
     return numeric_to_jlpt(max_level), details_str
 
+def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map):
+    """
+    Same as analyze_vocabulary but overrides levels from pedagogical_map.
+    Returns (level, details_str) only if the result differs from the strict analysis.
+    details format: 'word:N5@minna'
+    Returns ('-', '-') if identical to strict.
+    """
+    max_strict = 0
+    max_peda = 0
+    details = OrderedDict()
+
+    try:
+        tokens = tokenizer.tokenize(sentence)
+        for token in tokens:
+            if not should_count_for_vocab(token):
+                continue
+            surface = token.surface
+            base_form = token.base_form if hasattr(token, 'base_form') else surface
+
+            strict_level = None
+            if base_form and base_form != '*':
+                strict_level = vocab_map.get(base_form)
+            if not strict_level and surface and surface != '*':
+                strict_level = vocab_map.get(surface)
+
+            detail_key = base_form if base_form and base_form != '*' else surface
+            if not detail_key:
+                continue
+
+            # Check pedagogical override (for base_form or surface)
+            peda_entry = pedagogical_map.get(base_form) or pedagogical_map.get(surface)
+
+            if strict_level:
+                strict_num = get_jlpt_level(strict_level)
+                max_strict = max(max_strict, strict_num)
+
+                if peda_entry:
+                    peda_level, peda_source = peda_entry
+                    peda_num = get_jlpt_level(peda_level)
+                    # Only override if pedagogical is easier (lower number)
+                    if peda_num < strict_num:
+                        max_peda = max(max_peda, peda_num)
+                        details[detail_key] = f"{peda_level}@{peda_source}"
+                    else:
+                        max_peda = max(max_peda, strict_num)
+                        details[detail_key] = strict_level
+                else:
+                    max_peda = max(max_peda, strict_num)
+                    details[detail_key] = strict_level
+            else:
+                # Word not in strict vocab
+                if peda_entry:
+                    peda_level, peda_source = peda_entry
+                    peda_num = get_jlpt_level(peda_level)
+                    max_peda = max(max_peda, peda_num)
+                    details[detail_key] = f"{peda_level}@{peda_source}"
+                else:
+                    details[detail_key] = '?'
+    except Exception as e:
+        print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
+
+    details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
+
+    if max_peda == max_strict:
+        # No difference: return same level as strict, no details needed
+        return numeric_to_jlpt(max_strict), '-'
+
+    return numeric_to_jlpt(max_peda), details_str
+
+
 def analyze_kanji(sentence, kanji_map):
     """
     Analyze kanji in sentence and return highest JLPT level.
@@ -250,6 +343,7 @@ def process_sentences(
     grammar_file='data/jlpt_grammar.csv',
     vocab_file='data/jlpt_vocab.csv',
     kanji_file='data/jlpt_kanji.csv',
+    pedagogical_file='data/jlpt_vocab_pedagogical.csv',
     max_rows=None
 ):
     """
@@ -261,8 +355,10 @@ def process_sentences(
     
     vocab_map = load_level_map(vocab_file, 'word')
     kanji_map = load_level_map(kanji_file, 'kanji')
+    pedagogical_map = load_pedagogical_map(pedagogical_file)
     print(f"Loaded vocab entries: {len(vocab_map)}")
     print(f"Loaded kanji entries: {len(kanji_map)}")
+    print(f"Loaded pedagogical overrides: {len(pedagogical_map)}")
 
     grammar_patterns = load_grammar_patterns(grammar_file, fallback_file='grammar_patterns.csv')
 
@@ -288,6 +384,8 @@ def process_sentences(
     # Analyze each sentence
     vocab_levels = []
     vocab_details = []
+    vocab_peda_levels = []
+    vocab_peda_details = []
     kanji_levels = []
     kanji_details = []
     grammar_levels = []
@@ -300,11 +398,14 @@ def process_sentences(
         sentence = str(sentence).strip()
         
         vocab_level, vocab_detail = analyze_vocabulary(sentence, vocab_map)
+        peda_level, peda_detail = analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map)
         kanji_level, kanji_detail = analyze_kanji(sentence, kanji_map)
         grammar_level, grammar_detail = analyze_grammar(sentence, grammar_patterns)
-        
+
         vocab_levels.append(vocab_level)
         vocab_details.append(vocab_detail)
+        vocab_peda_levels.append(peda_level)
+        vocab_peda_details.append(peda_detail)
         kanji_levels.append(kanji_level)
         kanji_details.append(kanji_detail)
         grammar_levels.append(grammar_level)
@@ -313,6 +414,8 @@ def process_sentences(
     # Create output dataframe
     output_df = df.copy()
     output_df.columns = ['id', 'sentence']
+    output_df['vocab_jlpt_pedagogical'] = vocab_peda_levels
+    output_df['vocab_pedagogical_details'] = vocab_peda_details
     output_df['vocab_jlpt'] = vocab_levels
     output_df['vocab_details'] = vocab_details
     output_df['kanji_jlpt'] = kanji_levels
@@ -331,12 +434,13 @@ def process_sentences(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='JLPT analyzer for Japanese sentences')
-    parser.add_argument('--input', default='sentences-only.csv', help='Input CSV path')
-    parser.add_argument('--output', default='sentences-with-levels.csv', help='Output CSV path')
+    parser.add_argument('--input', default='input/sentences-only.csv', help='Input CSV path')
+    parser.add_argument('--output', default='output/sentences-with-levels.csv', help='Output CSV path')
     parser.add_argument('--grammar', default='data/jlpt_grammar.csv', help='Grammar patterns CSV path')
     parser.add_argument('--vocab', default='data/jlpt_vocab.csv', help='Vocabulary JLPT CSV path')
     parser.add_argument('--kanji', default='data/jlpt_kanji.csv', help='Kanji JLPT CSV path')
     parser.add_argument('--max-rows', type=int, default=None, help='Process only first N rows')
+    parser.add_argument('--pedagogical', default='data/jlpt_vocab_pedagogical.csv', help='Pedagogical overrides CSV path')
     args = parser.parse_args()
 
     result = process_sentences(
@@ -345,6 +449,7 @@ if __name__ == '__main__':
         grammar_file=args.grammar,
         vocab_file=args.vocab,
         kanji_file=args.kanji,
+        pedagogical_file=args.pedagogical,
         max_rows=args.max_rows
     )
     
