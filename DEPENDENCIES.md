@@ -24,7 +24,7 @@
 - **Format** : Métadonnées dans le dictionnaire MeCab
 
 ### Grammaire
-- **Source** : `grammar_patterns.csv` (fichier local)
+- **Source** : `data/grammar_patterns.csv` (fichier local)
 - **Données** : Patterns regex + niveaux JLPT pour les structures grammaticales courantes
 - **Format** : CSV avec colonnes `pattern | jlpt_level | description | pattern_type`
 - **Maintien** : À enrichir manuellement ou via des sources comme :
@@ -36,7 +36,7 @@
 
 Le script `process_sentences.py` :
 - Lit `sentences-only.csv` (ou tout CSV avec colonne `sentence`)
-- Utilise `grammar_patterns.csv` pour la détection de grammaire
+- Utilise `data/grammar_patterns.csv` pour la détection de grammaire
 - Génère `sentences-with-levels.csv` avec 4 colonnes :
   1. ID
   2. Phrase
@@ -47,6 +47,6 @@ Le script `process_sentences.py` :
 ## Mise à jour des données
 
 Pour mettre à jour les patterns de grammaire :
-1. Éditer `grammar_patterns.csv`
+1. Éditer `data/grammar_patterns.csv`
 2. Ajouter de nouveaux patterns avec leurs niveaux JLPT respectifs
 3. Relancer le script
