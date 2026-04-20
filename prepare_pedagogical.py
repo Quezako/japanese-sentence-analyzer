@@ -24,6 +24,7 @@ BASE_URL = "https://raw.githubusercontent.com/stephenmk/yomitan-jlpt-vocab/main/
 OUTPUT_FILE = "data/jlpt_vocab_pedagogical.csv"
 STRICT_FILE = "data/jlpt_vocab.csv"
 BUNPRO_FILE = "data/bunpro-voc-jlpt.csv"
+BUNPRO_O_FILE = "data/bunpro-o-vocab-extracted.csv"
 
 LEVEL_NUM = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
 
@@ -90,6 +91,51 @@ def compute_overrides(source_map, strict_map, source_name):
     return overrides
 
 
+def compute_overrides_all(source_map, strict_map, source_name):
+    """Like compute_overrides but also includes entries absent from the strict dataset.
+    Used for bunpro-o which contains expressions not present in word-level strict data."""
+    overrides = {}
+    for word, src_level in source_map.items():
+        strict_level = strict_map.get(word)
+        if strict_level is None:
+            # Word not in strict dataset: include it unconditionally
+            overrides[word] = {
+                'word': word,
+                'jlpt_level': src_level,
+                'source': source_name,
+            }
+        elif LEVEL_NUM[src_level] < LEVEL_NUM[strict_level]:
+            overrides[word] = {
+                'word': word,
+                'jlpt_level': src_level,
+                'source': source_name,
+            }
+    return overrides
+
+
+def load_bunpro_o_vocab():
+    """Load Bunpro-O extracted vocab map: word -> level (includes expressions)."""
+    if not os.path.exists(BUNPRO_O_FILE):
+        print(f"  WARNING: {BUNPRO_O_FILE} not found, bunpro-o source skipped.")
+        return {}
+
+    df = pd.read_csv(BUNPRO_O_FILE, sep='|', dtype=str).fillna('')
+    if 'word' not in df.columns or 'jlpt_level' not in df.columns:
+        print(f"  WARNING: invalid format in {BUNPRO_O_FILE}, source skipped.")
+        return {}
+
+    mapping = {}
+    for _, row in df.iterrows():
+        word = str(row.get('word', '')).strip()
+        level = str(row.get('jlpt_level', '')).strip().upper()
+        if not word or level not in LEVEL_NUM:
+            continue
+        existing = mapping.get(word)
+        if existing is None or LEVEL_NUM[level] < LEVEL_NUM[existing]:
+            mapping[word] = level
+    return mapping
+
+
 def load_strict_vocab():
     """Load the strict vocab map: word -> lowest level found."""
     if not os.path.exists(STRICT_FILE):
@@ -113,7 +159,15 @@ def main():
     strict = load_strict_vocab()
     print(f"  {len(strict)} entries loaded.")
 
-    print("Loading Bunpro pedagogical vocab (priority)...")
+    print("Loading Bunpro-O extracted vocab (highest priority)...")
+    bunpro_o = load_bunpro_o_vocab()
+    print(f"  {len(bunpro_o)} entries loaded.")
+
+    print("Computing Bunpro-O overrides (includes expressions absent from strict)...")
+    bunpro_o_overrides = compute_overrides_all(bunpro_o, strict, 'bunpro-o')
+    print(f"  {len(bunpro_o_overrides)} Bunpro-O overrides found.")
+
+    print("Loading Bunpro pedagogical vocab...")
     bunpro = load_bunpro_vocab()
     print(f"  {len(bunpro)} entries loaded.")
 
@@ -129,9 +183,10 @@ def main():
     waller_overrides = compute_overrides(pedagogical, strict, 'waller')
     print(f"  {len(waller_overrides)} Waller overrides found.")
 
-    # Merge with priority: Bunpro > Waller
+    # Merge with priority: Bunpro-O > Bunpro > Waller
     merged = dict(waller_overrides)
     merged.update(bunpro_overrides)
+    merged.update(bunpro_o_overrides)
 
     overrides = list(merged.values())
     overrides.sort(key=lambda x: (LEVEL_NUM[x['jlpt_level']], x['word']))
