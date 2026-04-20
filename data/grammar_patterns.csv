@@ -55,3 +55,6 @@ pattern|jlpt_level|description|pattern_type
 も|N4|Aussi, même|particle
 が|N4|Mais, cependant (utilisé après une phrase)|particle
 もの|N4|Chose, personne|noun
+です|N5|Copule formelle|verb_form
+ですか|N5|Question formelle|verb_form
+かしこまりました|N4|Expression polie de service|expression
