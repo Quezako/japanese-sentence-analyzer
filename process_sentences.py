@@ -322,7 +322,7 @@ def should_count_for_vocab(token):
     surface = token.surface if hasattr(token, 'surface') else ''
     if surface and re.fullmatch(r'[0-9０-９]+', surface):
         return False
-    if major in {'名詞', '動詞', '形容詞', '副詞'}:
+    if major in {'名詞', '動詞', '形容詞', '副詞', '感動詞', '連体詞'}:
         return True
     return False
 
@@ -334,11 +334,40 @@ def is_proper_noun_token(token):
     return major == '名詞' and sub1 == '固有名詞'
 
 
-def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None):
+HONORIFIC_SUFFIXES = {'さん', '様', 'さま', 'くん', 'ちゃん'}
+
+def is_kanji_or_katakana_word(text):
+    """Return True if text is composed only of kanji or katakana (typical name form)."""
+    if not text:
+        return False
+    return bool(re.fullmatch(r'[\u4e00-\u9fff々\u30A0-\u30FF\uFF66-\uFF9FA-Za-zＡ-Ｚａ-ｚ]+', text))
+
+
+def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None):
     if detail_key and proper_nouns and detail_key in proper_nouns:
         return 'PN'
     if is_proper_noun_token(token):
         return 'PN'
+
+    # Honorific suffix detection: if current token is an honorific suffix,
+    # and the previous token is kanji or katakana → it was a proper name
+    if detail_key in HONORIFIC_SUFFIXES:
+        if prev_token is not None:
+            prev_surface = prev_token.surface if hasattr(prev_token, 'surface') else ''
+            if is_kanji_or_katakana_word(prev_surface):
+                return 'PN'
+
+    # Previous token is an honorific suffix → current is the name it referred to
+    if prev_token is not None:
+        prev_surface = prev_token.surface if hasattr(prev_token, 'surface') else ''
+        if prev_surface in HONORIFIC_SUFFIXES and is_kanji_or_katakana_word(detail_key or ''):
+            return 'PN'
+
+    # Next token is an honorific suffix → current token is a proper name
+    if next_token is not None:
+        next_surface = next_token.surface if hasattr(next_token, 'surface') else ''
+        if next_surface in HONORIFIC_SUFFIXES and is_kanji_or_katakana_word(detail_key or ''):
+            return 'PN'
 
     candidate_values = []
     if detail_key:
@@ -577,24 +606,37 @@ def detect_grammar_matches(sentence, grammar_patterns):
     return matches
 
 
-def should_skip_vocab_due_to_grammar(detail_key, vocab_level, grammar_matches):
+def should_skip_vocab_due_to_grammar(detail_key, vocab_level, grammar_matches, lookup_candidates=None):
     """Suppress a vocab token if it is part of an easier matched grammar expression."""
     if not detail_key or not vocab_level or not grammar_matches:
         return False
     if len(detail_key) < 2:
         return False
 
+    terms = {str(detail_key).strip()}
+    if lookup_candidates:
+        for candidate in lookup_candidates:
+            text = str(candidate).strip()
+            if len(text) >= 2:
+                terms.add(text)
+
     vocab_num = get_jlpt_level(vocab_level)
     for pattern, grammar_level in grammar_matches:
         grammar_num = get_jlpt_level(grammar_level)
         if grammar_num <= 0 or grammar_num >= vocab_num:
             continue
-        if not pattern or pattern == detail_key:
+        if not pattern:
             continue
-        if len(pattern) <= len(detail_key):
+        pattern = str(pattern).strip()
+        if not pattern:
             continue
-        if detail_key in pattern:
-            return True
+        for term in terms:
+            if pattern == term:
+                continue
+            if len(pattern) <= len(term):
+                continue
+            if term in pattern:
+                return True
     return False
 
 def find_compound_matches(tokens, vocab_map, pedagogical_map=None):
@@ -622,7 +664,11 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None):
             for t in group:
                 pos = t.part_of_speech.split(',')
                 major = pos[0] if len(pos) > 0 else ''
+                sub1 = pos[1] if len(pos) > 1 else ''
                 if major in {'助詞', '助動詞', '記号'}:
+                    blocked = True
+                    break
+                if major == '名詞' and sub1 == '数':
                     blocked = True
                     break
                 token_surface = t.surface if hasattr(t, 'surface') else ''
@@ -698,6 +744,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
         compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map)
 
         for idx, token in enumerate(tokens):
+            prev_token = tokens[idx - 1] if idx > 0 else None
+            next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
             # Compound check must happen before any filtering
             if idx in compound_matches:
                 word, strict_level, _, _ = compound_matches[idx]
@@ -713,6 +761,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                         detail_key=word,
                         proper_nouns=proper_nouns,
                         common_words=common_words,
+                        prev_token=prev_token,
+                        next_token=next_token,
                     )
                 continue
 
@@ -725,6 +775,12 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 continue
             # Honorific prefix handled as grammar, skip in vocab
             if is_honorific_prefix(token):
+                continue
+            # Honorific suffix (さん, 様, …): tag as PN and skip
+            if token.surface in HONORIFIC_SUFFIXES:
+                detail_key = token.surface
+                if is_kanji_or_katakana_word(prev_token.surface if prev_token else ''):
+                    details[detail_key] = 'PN'
                 continue
 
             surface = token.surface
@@ -749,6 +805,13 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     details[detail_key] = counter_level
                 continue
 
+            # Proper nouns (固有名詞) → tag PN immediately, do not look up in vocab
+            if is_proper_noun_token(token):
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    details[detail_key] = 'PN'
+                continue
+
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             found_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
@@ -765,7 +828,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 continue
 
             if found_level:
-                if should_skip_vocab_due_to_grammar(detail_key, found_level, grammar_matches):
+                if should_skip_vocab_due_to_grammar(detail_key, found_level, grammar_matches, lookup_candidates):
                     continue
                 level = get_jlpt_level(found_level)
                 max_level = max(max_level, level)
@@ -777,6 +840,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     proper_nouns=proper_nouns,
                     common_words=common_words,
                     candidates=lookup_candidates,
+                    prev_token=prev_token,
+                    next_token=next_token,
                 )
     except Exception as e:
         print(f"Error analyzing vocabulary in '{sentence}': {e}")
@@ -800,6 +865,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
         compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map)
 
         for idx, token in enumerate(tokens):
+            prev_token = tokens[idx - 1] if idx > 0 else None
+            next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
             # Compound check must happen before any filtering
             if idx in compound_matches:
                 word, strict_level, peda_entry, _ = compound_matches[idx]
@@ -823,6 +890,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         details[detail_key] = strict_level
                 elif peda_entry:
                     peda_level, peda_source = peda_entry
+                    if should_skip_vocab_due_to_grammar(detail_key, peda_level, grammar_matches, [detail_key]):
+                        continue
                     peda_num = get_jlpt_level(peda_level)
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
@@ -832,6 +901,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         detail_key=detail_key,
                         proper_nouns=proper_nouns,
                         common_words=common_words,
+                        prev_token=prev_token,
+                        next_token=next_token,
                     )
                 continue
 
@@ -845,10 +916,23 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
             # Honorific prefix handled as grammar, skip in vocab
             if is_honorific_prefix(token):
                 continue
+            # Honorific suffix (さん, 様, …): tag as PN and skip
+            if token.surface in HONORIFIC_SUFFIXES:
+                detail_key = token.surface
+                if is_kanji_or_katakana_word(prev_token.surface if prev_token else ''):
+                    details[detail_key] = 'PN'
+                continue
 
             surface = token.surface
             base_form = token.base_form if hasattr(token, 'base_form') else surface
             reading = getattr(token, 'reading', '') if hasattr(token, 'reading') else ''
+
+            # Proper nouns (固有名詞) → tag PN immediately, do not look up in vocab
+            if is_proper_noun_token(token):
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    details[detail_key] = 'PN'
+                continue
 
             if ignore_katakana and (is_katakana_word(surface) or is_katakana_word(base_form)):
                 continue
@@ -887,7 +971,7 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
             peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, lookup_candidates)
 
             if strict_level:
-                if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches):
+                if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches, lookup_candidates):
                     continue
                 strict_num = get_jlpt_level(strict_level)
                 max_strict = max(max_strict, strict_num)
@@ -909,6 +993,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                 # Word not in strict vocab
                 if peda_entry:
                     peda_level, peda_source = peda_entry
+                    if should_skip_vocab_due_to_grammar(detail_key, peda_level, grammar_matches, lookup_candidates):
+                        continue
                     peda_num = get_jlpt_level(peda_level)
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
@@ -919,6 +1005,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         proper_nouns=proper_nouns,
                         common_words=common_words,
                         candidates=lookup_candidates,
+                        prev_token=prev_token,
+                        next_token=next_token,
                     )
     except Exception as e:
         print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
