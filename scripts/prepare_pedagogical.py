@@ -20,11 +20,13 @@ import pandas as pd
 import os
 import sys
 
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_URL = "https://raw.githubusercontent.com/stephenmk/yomitan-jlpt-vocab/main/original_data/{level}.csv"
-OUTPUT_FILE = "data/jlpt_vocab_pedagogical.csv"
-STRICT_FILE = "data/jlpt_vocab.csv"
-BUNPRO_FILE = "data/bunpro-voc-jlpt.csv"
-BUNPRO_O_FILE = "data/bunpro-o-vocab-extracted.csv"
+OUTPUT_FILE = str(BASE_DIR / "data" / "jlpt_vocab_pedagogical.csv")
+STRICT_FILE = str(BASE_DIR / "data" / "jlpt_vocab.csv")
+BUNPRO_FILE = str(BASE_DIR / "data" / "bunpro-voc-jlpt.csv")
+BUNPRO_O_FILE = str(BASE_DIR / "data" / "bunpro-o-vocab-extracted.csv")
 
 LEVEL_NUM = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
 

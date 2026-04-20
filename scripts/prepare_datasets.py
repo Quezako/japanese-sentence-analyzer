@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from urllib.request import urlopen
 
-DATA_DIR = Path(__file__).parent / 'data'
+DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
 
 VOCAB_URL = 'https://raw.githubusercontent.com/Bluskyo/JLPT_Vocabulary/main/data/results/JLPTWords.csv'
 KANJI_URL = 'https://raw.githubusercontent.com/davidluzgouveia/kanji-data/master/kanji.json'

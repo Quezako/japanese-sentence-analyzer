@@ -21,10 +21,12 @@ import glob
 import pandas as pd
 from bs4 import BeautifulSoup
 
-BUNPRO_DIR = "data/bunpro-voc-jlpt"
-NIHONER_DIR = "data/bunpro-voc-jlpt/Nihoner"
-OUTPUT_BUNPRO = "data/bunpro-voc-jlpt.csv"
-OUTPUT_NIHONER = "data/nihoner-voc-jlpt.csv"
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+BUNPRO_DIR = str(BASE_DIR / "data" / "bunpro-voc-jlpt")
+NIHONER_DIR = str(BASE_DIR / "data" / "bunpro-voc-jlpt" / "Nihoner")
+OUTPUT_BUNPRO = str(BASE_DIR / "data" / "bunpro-voc-jlpt.csv")
+OUTPUT_NIHONER = str(BASE_DIR / "data" / "nihoner-voc-jlpt.csv")
 
 
 def infer_level_from_filename(filename):

@@ -9,8 +9,11 @@ import urllib.request
 import zipfile
 from collections import defaultdict
 
+from pathlib import Path
+
 RELEASE_API = "https://api.github.com/repos/scriptin/jmdict-simplified/releases/latest"
-OUT_FILE = "data/proper_nouns.csv"
+BASE_DIR = Path(__file__).resolve().parent.parent
+OUT_FILE = BASE_DIR / "data" / "proper_nouns.csv"
 
 # Keep the most useful name categories for sentence-level PN tagging.
 ALLOWED_TYPES = {

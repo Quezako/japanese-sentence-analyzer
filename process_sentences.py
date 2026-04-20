@@ -108,7 +108,114 @@ def load_pedagogical_map(file_path):
     return mapping
 
 
-def load_grammar_patterns(primary_file, fallback_file='grammar_patterns.csv'):
+def load_word_level_source_map(file_path, word_col='word', level_col='jlpt_level', source_name='source'):
+    """Load a generic word->(level, source) map from a pipe-separated CSV."""
+    if not file_path or not os.path.exists(file_path):
+        return {}
+    try:
+        df = pd.read_csv(file_path, sep='|', dtype=str).fillna('')
+    except Exception:
+        return {}
+
+    if word_col not in df.columns or level_col not in df.columns:
+        return {}
+
+    mapping = {}
+    for _, row in df.iterrows():
+        word = str(row.get(word_col, '')).strip()
+        level = str(row.get(level_col, '')).strip().upper()
+        if not word or level not in {'N1', 'N2', 'N3', 'N4', 'N5'}:
+            continue
+        source = str(row.get(source_name, '')).strip() if source_name in df.columns else ''
+        source = source if source else source_name
+
+        existing = mapping.get(word)
+        if existing is None or get_jlpt_level(level) < get_jlpt_level(existing[0]):
+            mapping[word] = (level, source)
+    return mapping
+
+
+def merge_pedagogical_maps(primary_map, fallback_map):
+    """Merge fallback entries into pedagogical map, keeping the easiest level."""
+    merged = dict(primary_map)
+    for word, (level, source) in fallback_map.items():
+        existing = merged.get(word)
+        if existing is None or get_jlpt_level(level) < get_jlpt_level(existing[0]):
+            merged[word] = (level, source)
+    return merged
+
+
+def load_common_words(file_path):
+    """Load common non-JLPT words to tag as CO when unknown."""
+    if not file_path or not os.path.exists(file_path):
+        return set()
+
+    try:
+        df = pd.read_csv(file_path, sep='|', dtype=str).fillna('')
+    except Exception:
+        return set()
+
+    if 'word' not in df.columns:
+        return set()
+
+    words = set()
+    for value in df['word']:
+        word = str(value).strip()
+        if word:
+            words.add(word)
+    return words
+
+
+def load_word_variants(file_path):
+    """Load word->set(variants) mapping from a pipe-separated CSV."""
+    if not file_path or not os.path.exists(file_path):
+        return {}
+
+    try:
+        df = pd.read_csv(file_path, sep='|', dtype=str).fillna('')
+    except Exception:
+        return {}
+
+    if 'word' not in df.columns or 'variant' not in df.columns:
+        return {}
+
+    mapping = {}
+    for _, row in df.iterrows():
+        word = str(row.get('word', '')).strip()
+        variant = str(row.get('variant', '')).strip()
+        if not word or not variant or word == variant:
+            continue
+        mapping.setdefault(word, set()).add(variant)
+
+    return mapping
+
+
+def expand_candidates_with_variants(candidates, variants_map, max_new=20):
+    """Expand candidate forms with known lexical variants from JMdict."""
+    if not candidates or not variants_map:
+        return candidates
+
+    expanded = list(candidates)
+    seen = set(candidates)
+    queue = list(candidates)
+    added = 0
+
+    while queue and added < max_new:
+        current = queue.pop(0)
+        for variant in variants_map.get(current, set()):
+            if not variant or variant in seen:
+                continue
+            expanded.append(variant)
+            seen.add(variant)
+            queue.append(variant)
+            added += 1
+            if added >= max_new:
+                break
+
+    return expanded
+
+
+def load_grammar_patterns(primary_file, fallback_file='data/grammar_patterns.csv'):
     frames = []
 
     if os.path.exists(primary_file):
@@ -227,10 +334,23 @@ def is_proper_noun_token(token):
     return major == '名詞' and sub1 == '固有名詞'
 
 
-def unknown_vocab_tag(token, detail_key=None, proper_nouns=None):
+def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None):
     if detail_key and proper_nouns and detail_key in proper_nouns:
         return 'PN'
-    return 'PN' if is_proper_noun_token(token) else '?'
+    if is_proper_noun_token(token):
+        return 'PN'
+
+    candidate_values = []
+    if detail_key:
+        candidate_values.append(detail_key)
+    if candidates:
+        candidate_values.extend([str(c).strip() for c in candidates if c and str(c).strip()])
+
+    if common_words:
+        for value in candidate_values:
+            if value in common_words:
+                return 'CO'
+    return '?'
 
 
 def get_counter_override_level(token):
@@ -242,6 +362,22 @@ def get_counter_override_level(token):
     surface = token.surface if hasattr(token, 'surface') else ''
 
     if major == '名詞' and sub1 == '接尾' and sub2 == '助数詞' and surface in {'時', '分', '日', '歳', '回'}:
+        return 'N5'
+    return None
+
+
+def get_basic_counting_override_level(token):
+    """Detect basic counting forms (e.g. ５月, ３つ) as N5."""
+    surface = token.surface if hasattr(token, 'surface') else ''
+    if not surface:
+        return None
+    text = str(surface).strip()
+    if not text:
+        return None
+
+    number_prefix = r'[0-9０-９一二三四五六七八九十百千万何]+'
+    basic_suffixes = r'(月|か月|ヶ月|つ)'
+    if re.fullmatch(number_prefix + basic_suffixes, text):
         return 'N5'
     return None
 
@@ -549,7 +685,7 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None):
     return matches, consumed
 
 
-def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None):
+def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, variants_map=None):
     """
     Analyze vocabulary in sentence and return highest JLPT level.
     Uses janome tokenizer to handle conjugated verbs and complex words.
@@ -572,7 +708,12 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     max_level = max(max_level, level)
                     details[word] = strict_level
                 else:
-                    details[word] = unknown_vocab_tag(token, detail_key=word, proper_nouns=proper_nouns)
+                    details[word] = unknown_vocab_tag(
+                        token,
+                        detail_key=word,
+                        proper_nouns=proper_nouns,
+                        common_words=common_words,
+                    )
                 continue
 
             if idx in consumed_by_compound:
@@ -590,6 +731,15 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             base_form = token.base_form if hasattr(token, 'base_form') else surface
             reading = getattr(token, 'reading', '') if hasattr(token, 'reading') else ''
 
+            basic_counting_level = get_basic_counting_override_level(token)
+            if basic_counting_level:
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    level = get_jlpt_level(basic_counting_level)
+                    max_level = max(max_level, level)
+                    details[detail_key] = basic_counting_level
+                continue
+
             counter_level = get_counter_override_level(token)
             if counter_level:
                 detail_key = surface if surface else base_form
@@ -600,7 +750,13 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 continue
 
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+            lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             found_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
+
+            if not found_level and supplemental_map:
+                supplemental_entry, _ = pick_best_pedagogical_entry(supplemental_map, lookup_candidates)
+                if supplemental_entry:
+                    found_level = supplemental_entry[0]
 
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
@@ -615,14 +771,20 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 max_level = max(max_level, level)
                 details[detail_key] = found_level
             else:
-                details[detail_key] = unknown_vocab_tag(token, detail_key=detail_key, proper_nouns=proper_nouns)
+                details[detail_key] = unknown_vocab_tag(
+                    token,
+                    detail_key=detail_key,
+                    proper_nouns=proper_nouns,
+                    common_words=common_words,
+                    candidates=lookup_candidates,
+                )
     except Exception as e:
         print(f"Error analyzing vocabulary in '{sentence}': {e}")
 
     details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
     return numeric_to_jlpt(max_level), details_str
 
-def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None):
+def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, variants_map=None):
     """
     Same as analyze_vocabulary but overrides levels from pedagogical_map.
     Returns (level, details_str) only if the result differs from the strict analysis.
@@ -665,7 +827,12 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
                 else:
-                    details[detail_key] = unknown_vocab_tag(token, detail_key=detail_key, proper_nouns=proper_nouns)
+                    details[detail_key] = unknown_vocab_tag(
+                        token,
+                        detail_key=detail_key,
+                        proper_nouns=proper_nouns,
+                        common_words=common_words,
+                    )
                 continue
 
             if idx in consumed_by_compound:
@@ -686,6 +853,16 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
             if ignore_katakana and (is_katakana_word(surface) or is_katakana_word(base_form)):
                 continue
 
+            basic_counting_level = get_basic_counting_override_level(token)
+            if basic_counting_level:
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    counting_num = get_jlpt_level(basic_counting_level)
+                    max_strict = max(max_strict, counting_num)
+                    max_peda = max(max_peda, counting_num)
+                    details[detail_key] = basic_counting_level
+                continue
+
             counter_level = get_counter_override_level(token)
             if counter_level:
                 detail_key = surface if surface else base_form
@@ -697,6 +874,7 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                 continue
 
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+            lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             strict_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
 
             detail_key = base_form if base_form and base_form != '*' else surface
@@ -735,7 +913,13 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
                 else:
-                    details[detail_key] = unknown_vocab_tag(token, detail_key=detail_key, proper_nouns=proper_nouns)
+                    details[detail_key] = unknown_vocab_tag(
+                        token,
+                        detail_key=detail_key,
+                        proper_nouns=proper_nouns,
+                        common_words=common_words,
+                        candidates=lookup_candidates,
+                    )
     except Exception as e:
         print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
 
@@ -799,7 +983,10 @@ def process_sentences(
     vocab_file='data/jlpt_vocab.csv',
     kanji_file='data/jlpt_kanji.csv',
     pedagogical_file='data/jlpt_vocab_pedagogical.csv',
+    bunpro_vocab_file='data/bunpro-voc-jlpt.csv',
     proper_nouns_file='data/proper_nouns.csv',
+    common_vocab_file='data/common_vocab.csv',
+    variants_file='data/jmdict_word_variants.csv',
     max_rows=None,
     offset=None,
     ids=None
@@ -814,13 +1001,25 @@ def process_sentences(
     vocab_map = load_level_map(vocab_file, 'word')
     kanji_map = load_level_map(kanji_file, 'kanji')
     pedagogical_map = load_pedagogical_map(pedagogical_file)
+    bunpro_fallback = load_word_level_source_map(
+        bunpro_vocab_file,
+        word_col='word',
+        level_col='jlpt_level',
+        source_name='bunpro',
+    )
+    pedagogical_map = merge_pedagogical_maps(pedagogical_map, bunpro_fallback)
     proper_nouns = load_proper_nouns(proper_nouns_file)
+    common_words = load_common_words(common_vocab_file)
+    variants_map = load_word_variants(variants_file)
     print(f"Loaded vocab entries: {len(vocab_map)}")
     print(f"Loaded kanji entries: {len(kanji_map)}")
     print(f"Loaded pedagogical overrides: {len(pedagogical_map)}")
+    print(f"Loaded Bunpro fallback entries: {len(bunpro_fallback)}")
     print(f"Loaded proper nouns: {len(proper_nouns)}")
+    print(f"Loaded common words (CO): {len(common_words)}")
+    print(f"Loaded word variants: {len(variants_map)}")
 
-    grammar_patterns = load_grammar_patterns(grammar_file, fallback_file='grammar_patterns.csv')
+    grammar_patterns = load_grammar_patterns(grammar_file, fallback_file='data/grammar_patterns.csv')
 
     print(f"Loaded grammar patterns: {len(grammar_patterns)}")
     
@@ -882,14 +1081,19 @@ def process_sentences(
             analysis_sentence,
             vocab_map,
             grammar_matches=grammar_matches,
-            proper_nouns=proper_nouns
+            proper_nouns=proper_nouns,
+            common_words=common_words,
+            supplemental_map=pedagogical_map,
+            variants_map=variants_map,
         )
         peda_level, peda_detail = analyze_vocab_pedagogical(
             analysis_sentence,
             vocab_map,
             pedagogical_map,
             grammar_matches=grammar_matches,
-            proper_nouns=proper_nouns
+            proper_nouns=proper_nouns,
+            common_words=common_words,
+            variants_map=variants_map,
         )
         no_kata_level, _ = analyze_vocab_pedagogical(
             analysis_sentence,
@@ -897,7 +1101,9 @@ def process_sentences(
             pedagogical_map,
             ignore_katakana=True,
             grammar_matches=grammar_matches,
-            proper_nouns=proper_nouns
+            proper_nouns=proper_nouns,
+            common_words=common_words,
+            variants_map=variants_map,
         )
 
         # Keep pedagogical level unless removing katakana lowers the level.
@@ -963,7 +1169,10 @@ if __name__ == '__main__':
     parser.add_argument('--grammar', default='data/jlpt_grammar.csv', help='Grammar patterns CSV path')
     parser.add_argument('--vocab', default='data/jlpt_vocab.csv', help='Vocabulary JLPT CSV path')
     parser.add_argument('--kanji', default='data/jlpt_kanji.csv', help='Kanji JLPT CSV path')
+    parser.add_argument('--bunpro-vocab', default='data/bunpro-voc-jlpt.csv', help='Bunpro vocab CSV path')
     parser.add_argument('--proper-nouns', default='data/proper_nouns.csv', help='Proper nouns CSV path')
+    parser.add_argument('--common-vocab', default='data/common_vocab.csv', help='Common non-JLPT vocab CSV path for CO tagging')
+    parser.add_argument('--variants', default='data/jmdict_word_variants.csv', help='Word variants CSV path for lexical variant lookup')
     parser.add_argument('--max-rows', type=int, default=None, help='Process only first N rows (after offset)')
     parser.add_argument('--offset', type=int, default=None, help='Skip first N rows before processing')
     parser.add_argument('--ids', default=None, help='Comma-separated IDs to process (e.g. 4058,4372,4434,4498)')
@@ -986,7 +1195,10 @@ if __name__ == '__main__':
         grammar_file=args.grammar,
         vocab_file=args.vocab,
         kanji_file=args.kanji,
+        bunpro_vocab_file=args.bunpro_vocab,
         proper_nouns_file=args.proper_nouns,
+        common_vocab_file=args.common_vocab,
+        variants_file=args.variants,
         pedagogical_file=args.pedagogical,
         max_rows=args.max_rows,
         offset=args.offset,
