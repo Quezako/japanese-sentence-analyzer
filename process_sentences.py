@@ -3,6 +3,7 @@
 
 import pandas as pd
 import re
+import html
 from janome.tokenizer import Tokenizer
 import os
 import argparse
@@ -145,6 +146,40 @@ def should_count_for_vocab(token):
     return False
 
 
+def clean_sentence_for_analysis(sentence):
+    """Remove HTML tags/entities and normalize whitespace before analysis."""
+    text = html.unescape(str(sentence))
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def is_meaningful_token_text(text):
+    """Keep only tokens containing Japanese or alphanumeric characters."""
+    if not text:
+        return False
+    return bool(re.search(r'[A-Za-z0-9Ａ-Ｚａ-ｚ０-９\u3040-\u30ff\u3400-\u9fff々〆ヶ]', text))
+
+
+def is_tokenization_artifact(token):
+    """Detect Janome artifacts like いつ -> い(いる)+つ and ignore them."""
+    surface = token.surface if hasattr(token, 'surface') else ''
+    base_form = token.base_form if hasattr(token, 'base_form') else surface
+    pos = token.part_of_speech.split(',')
+    major = pos[0] if len(pos) > 0 else ''
+
+    if major != '動詞':
+        return False
+    if not surface or not base_form:
+        return False
+
+    # Single hiragana token analyzed as an independent verb is usually noise.
+    if re.fullmatch(r'[ぁ-ゖ]', surface) and len(base_form) >= 2:
+        return True
+
+    return False
+
+
 def detect_conjugation_details(sentence):
     details = OrderedDict()
     try:
@@ -179,6 +214,8 @@ def analyze_vocabulary(sentence, vocab_map):
         for token in tokens:
             if not should_count_for_vocab(token):
                 continue
+            if is_tokenization_artifact(token):
+                continue
             surface = token.surface
             base_form = token.base_form if hasattr(token, 'base_form') else surface
             found_level = None
@@ -191,6 +228,8 @@ def analyze_vocabulary(sentence, vocab_map):
 
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
+                continue
+            if not is_meaningful_token_text(detail_key):
                 continue
 
             if found_level:
@@ -221,6 +260,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map):
         for token in tokens:
             if not should_count_for_vocab(token):
                 continue
+            if is_tokenization_artifact(token):
+                continue
             surface = token.surface
             base_form = token.base_form if hasattr(token, 'base_form') else surface
 
@@ -232,6 +273,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map):
 
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
+                continue
+            if not is_meaningful_token_text(detail_key):
                 continue
 
             # Check pedagogical override (for base_form or surface)
@@ -344,7 +387,8 @@ def process_sentences(
     vocab_file='data/jlpt_vocab.csv',
     kanji_file='data/jlpt_kanji.csv',
     pedagogical_file='data/jlpt_vocab_pedagogical.csv',
-    max_rows=None
+    max_rows=None,
+    offset=None
 ):
     """
     Main function: reads input CSV, analyzes sentences, and writes output CSV
@@ -376,6 +420,9 @@ def process_sentences(
     if 'ja' in df.columns:
         df = df.rename(columns={'ja': 'sentence'})
 
+    if offset is not None and offset > 0:
+        df = df.iloc[offset:].copy()
+
     if max_rows is not None:
         df = df.head(max_rows).copy()
     
@@ -396,11 +443,12 @@ def process_sentences(
             print(f"  Progress: {idx}/{len(df)}")
         
         sentence = str(sentence).strip()
-        
-        vocab_level, vocab_detail = analyze_vocabulary(sentence, vocab_map)
-        peda_level, peda_detail = analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map)
-        kanji_level, kanji_detail = analyze_kanji(sentence, kanji_map)
-        grammar_level, grammar_detail = analyze_grammar(sentence, grammar_patterns)
+        analysis_sentence = clean_sentence_for_analysis(sentence)
+
+        vocab_level, vocab_detail = analyze_vocabulary(analysis_sentence, vocab_map)
+        peda_level, peda_detail = analyze_vocab_pedagogical(analysis_sentence, vocab_map, pedagogical_map)
+        kanji_level, kanji_detail = analyze_kanji(analysis_sentence, kanji_map)
+        grammar_level, grammar_detail = analyze_grammar(analysis_sentence, grammar_patterns)
 
         vocab_levels.append(vocab_level)
         vocab_details.append(vocab_detail)
@@ -416,7 +464,7 @@ def process_sentences(
     output_df.columns = ['id', 'sentence']
     output_df['vocab_jlpt_pedagogical'] = vocab_peda_levels
     output_df['vocab_pedagogical_details'] = vocab_peda_details
-    output_df['vocab_jlpt'] = vocab_levels
+    output_df['vocab_jlpt_strict'] = vocab_levels
     output_df['vocab_details'] = vocab_details
     output_df['kanji_jlpt'] = kanji_levels
     output_df['kanji_details'] = kanji_details
@@ -432,25 +480,49 @@ def process_sentences(
     
     return output_df
 
+
+def resolve_output_file(user_output, max_rows=None, offset=None):
+    """
+    Resolve output path with only two default names:
+      - full run: output/sentences-with-levels.csv
+      - test run (offset or max_rows used): output/sentences-with-levels-test.csv
+    If user_output is provided explicitly, keep it.
+    """
+    if user_output:
+        return user_output
+
+    is_test_run = (max_rows is not None) or (offset is not None and offset > 0)
+    if is_test_run:
+        return 'output/sentences-with-levels-test.csv'
+    return 'output/sentences-with-levels.csv'
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='JLPT analyzer for Japanese sentences')
     parser.add_argument('--input', default='input/sentences-only.csv', help='Input CSV path')
-    parser.add_argument('--output', default='output/sentences-with-levels.csv', help='Output CSV path')
+    parser.add_argument('--output', default=None, help='Output CSV path (optional; auto-selects total/test filename if omitted)')
     parser.add_argument('--grammar', default='data/jlpt_grammar.csv', help='Grammar patterns CSV path')
     parser.add_argument('--vocab', default='data/jlpt_vocab.csv', help='Vocabulary JLPT CSV path')
     parser.add_argument('--kanji', default='data/jlpt_kanji.csv', help='Kanji JLPT CSV path')
-    parser.add_argument('--max-rows', type=int, default=None, help='Process only first N rows')
+    parser.add_argument('--max-rows', type=int, default=None, help='Process only first N rows (after offset)')
+    parser.add_argument('--offset', type=int, default=None, help='Skip first N rows before processing')
     parser.add_argument('--pedagogical', default='data/jlpt_vocab_pedagogical.csv', help='Pedagogical overrides CSV path')
     args = parser.parse_args()
 
+    output_file = resolve_output_file(
+        user_output=args.output,
+        max_rows=args.max_rows,
+        offset=args.offset,
+    )
+
     result = process_sentences(
         input_file=args.input,
-        output_file=args.output,
+        output_file=output_file,
         grammar_file=args.grammar,
         vocab_file=args.vocab,
         kanji_file=args.kanji,
         pedagogical_file=args.pedagogical,
-        max_rows=args.max_rows
+        max_rows=args.max_rows,
+        offset=args.offset
     )
     
     # Show sample
