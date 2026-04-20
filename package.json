@@ -1,0 +1,17 @@
+{
+  "name": "jlpt-sentence-analyzer",
+  "version": "1.0.0",
+  "description": "Analyzes Japanese sentences and assigns JLPT levels for vocabulary, kanji, and grammar",
+  "main": "process_sentences.py",
+  "scripts": {
+    "process": "python process_sentences.py"
+  },
+  "keywords": [
+    "jlpt",
+    "japanese",
+    "nlp",
+    "language-learning"
+  ],
+  "author": "",
+  "license": "MIT"
+}
