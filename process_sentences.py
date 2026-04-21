@@ -433,6 +433,12 @@ def is_katakana_word(text):
     return bool(re.fullmatch(r'[\u30A0-\u30FF\uFF66-\uFF9F]+', text))
 
 
+def is_hiragana_word(text):
+    if not text:
+        return False
+    return bool(re.fullmatch(r'[ぁ-ゖー]+', text))
+
+
 def katakana_to_hiragana(text):
     if not text:
         return ''
@@ -473,6 +479,90 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
             candidates.append('御' + form[1:])
             candidates.append(form[1:])
     return list(dict.fromkeys(candidates))
+
+
+def detect_katakana_honorific_name(tokens, start_idx, suffixes):
+    """Return (combined_name, end_idx) for katakana-sequence + honorific suffix, else (None, None)."""
+    if start_idx < 0 or start_idx >= len(tokens):
+        return None, None
+
+    current = tokens[start_idx]
+    current_surface = current.surface if hasattr(current, 'surface') else ''
+    if not is_katakana_word(current_surface):
+        return None, None
+
+    name_parts = [current_surface]
+    idx = start_idx + 1
+    while idx < len(tokens):
+        surface = tokens[idx].surface if hasattr(tokens[idx], 'surface') else ''
+        if surface in suffixes:
+            return ''.join(name_parts), idx
+        if is_katakana_word(surface):
+            name_parts.append(surface)
+            idx += 1
+            continue
+        break
+
+    return None, None
+
+
+def infer_purpose_stem_candidates(tokens, idx):
+    """Infer dictionary-form candidates for Xにいく/くる purpose pattern (e.g. ききにいく -> 聞く)."""
+    if idx < 0 or idx + 2 >= len(tokens):
+        return []
+
+    token = tokens[idx]
+    stem = token.surface if hasattr(token, 'surface') else ''
+    if not stem or not is_hiragana_word(stem):
+        return []
+
+    next_token = tokens[idx + 1]
+    next_surface = next_token.surface if hasattr(next_token, 'surface') else ''
+    if next_surface != 'に':
+        return []
+
+    next_next = tokens[idx + 2]
+    next_next_base = next_next.base_form if hasattr(next_next, 'base_form') else (next_next.surface if hasattr(next_next, 'surface') else '')
+    if next_next_base not in {'いく', 'くる', '行く', '来る'}:
+        return []
+
+    prev_token = tokens[idx - 1] if idx > 0 else None
+    prev_surface = prev_token.surface if prev_token is not None and hasattr(prev_token, 'surface') else ''
+    if prev_surface not in {'を', 'が'}:
+        return []
+
+    godan_map = {
+        'い': 'う', 'き': 'く', 'ぎ': 'ぐ', 'し': 'す', 'ち': 'つ',
+        'に': 'ぬ', 'び': 'ぶ', 'み': 'む', 'り': 'る'
+    }
+    candidates = []
+    last_char = stem[-1]
+    if last_char in godan_map and len(stem) >= 1:
+        candidates.append(stem[:-1] + godan_map[last_char])
+    candidates.append(stem + 'る')
+    return list(dict.fromkeys(candidates))
+
+
+def is_likely_katakana_name_by_context(tokens, idx, has_katakana_proper_noun):
+    """Heuristic: katakana noun near particles in a sentence that already contains a katakana PN."""
+    if not has_katakana_proper_noun or idx < 0 or idx >= len(tokens):
+        return False
+
+    token = tokens[idx]
+    surface = token.surface if hasattr(token, 'surface') else ''
+    if not is_katakana_word(surface):
+        return False
+
+    pos = token.part_of_speech.split(',')
+    major = pos[0] if len(pos) > 0 else ''
+    sub1 = pos[1] if len(pos) > 1 else ''
+    if major != '名詞' or sub1 == '固有名詞':
+        return False
+
+    prev_surface = tokens[idx - 1].surface if idx > 0 and hasattr(tokens[idx - 1], 'surface') else ''
+    next_surface = tokens[idx + 1].surface if idx + 1 < len(tokens) and hasattr(tokens[idx + 1], 'surface') else ''
+    particles = {'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'も', 'の', 'や'}
+    return prev_surface in particles or next_surface in particles
 
 
 def pick_best_vocab_level(vocab_map, candidates):
@@ -516,8 +606,9 @@ def is_tokenization_artifact(token):
     if not surface or not base_form:
         return False
 
-    # Single hiragana token analyzed as an independent verb is usually noise.
-    if re.fullmatch(r'[ぁ-ゖ]', surface) and len(base_form) >= 2:
+    # Single hiragana token analyzed as an independent verb is usually noise,
+    # except for very common beginner verbs like いる that Janome may split as い + ます.
+    if re.fullmatch(r'[ぁ-ゖ]', surface) and len(base_form) >= 2 and base_form not in {'いる'}:
         return True
 
     return False
@@ -582,6 +673,15 @@ def detect_grammar_matches(sentence, grammar_patterns):
                             matches.append(key)
                             seen.add(key)
                     continue
+                if variant == 'が':
+                    # Match adversative/clause-final が, not the regular subject marker.
+                    matched = bool(re.search(r'が(?=[、。]|$)', sentence))
+                    if matched:
+                        key = (variant, jlpt_level)
+                        if key not in seen:
+                            matches.append(key)
+                            seen.add(key)
+                    continue
                 try:
                     matched = bool(re.search(variant, sentence))
                 except re.error:
@@ -632,7 +732,7 @@ def should_skip_vocab_due_to_grammar(detail_key, vocab_level, grammar_matches, l
             continue
         for term in terms:
             if pattern == term:
-                continue
+                return True
             if len(pattern) <= len(term):
                 continue
             if term in pattern:
@@ -742,10 +842,27 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
     try:
         tokens = list(tokenizer.tokenize(sentence))
         compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map)
+        consumed_by_name_span = set()
+        has_katakana_proper_noun = any(
+            is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
+            for tok in tokens
+        )
 
         for idx, token in enumerate(tokens):
+            if idx in consumed_by_name_span:
+                continue
             prev_token = tokens[idx - 1] if idx > 0 else None
             next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
+
+            merged_name, honorific_idx = detect_katakana_honorific_name(tokens, idx, HONORIFIC_SUFFIXES)
+            if merged_name:
+                details[merged_name] = 'PN'
+                suffix_surface = tokens[honorific_idx].surface if hasattr(tokens[honorific_idx], 'surface') else ''
+                if suffix_surface:
+                    details[suffix_surface] = 'PN'
+                for consumed_idx in range(idx + 1, honorific_idx + 1):
+                    consumed_by_name_span.add(consumed_idx)
+                continue
             # Compound check must happen before any filtering
             if idx in compound_matches:
                 word, strict_level, _, _ = compound_matches[idx]
@@ -812,7 +929,15 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     details[detail_key] = 'PN'
                 continue
 
+            if is_likely_katakana_name_by_context(tokens, idx, has_katakana_proper_noun):
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    details[detail_key] = 'PN'
+                continue
+
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+            lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
+            lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             found_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
 
@@ -863,10 +988,27 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
     try:
         tokens = list(tokenizer.tokenize(sentence))
         compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map)
+        consumed_by_name_span = set()
+        has_katakana_proper_noun = any(
+            is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
+            for tok in tokens
+        )
 
         for idx, token in enumerate(tokens):
+            if idx in consumed_by_name_span:
+                continue
             prev_token = tokens[idx - 1] if idx > 0 else None
             next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
+
+            merged_name, honorific_idx = detect_katakana_honorific_name(tokens, idx, HONORIFIC_SUFFIXES)
+            if merged_name:
+                details[merged_name] = 'PN'
+                suffix_surface = tokens[honorific_idx].surface if hasattr(tokens[honorific_idx], 'surface') else ''
+                if suffix_surface:
+                    details[suffix_surface] = 'PN'
+                for consumed_idx in range(idx + 1, honorific_idx + 1):
+                    consumed_by_name_span.add(consumed_idx)
+                continue
             # Compound check must happen before any filtering
             if idx in compound_matches:
                 word, strict_level, peda_entry, _ = compound_matches[idx]
@@ -934,6 +1076,12 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     details[detail_key] = 'PN'
                 continue
 
+            if is_likely_katakana_name_by_context(tokens, idx, has_katakana_proper_noun):
+                detail_key = surface if surface else base_form
+                if detail_key and is_meaningful_token_text(detail_key):
+                    details[detail_key] = 'PN'
+                continue
+
             if ignore_katakana and (is_katakana_word(surface) or is_katakana_word(base_form)):
                 continue
 
@@ -958,6 +1106,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                 continue
 
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+            lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
+            lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             strict_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
 
