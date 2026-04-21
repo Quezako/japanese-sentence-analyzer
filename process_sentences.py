@@ -145,6 +145,66 @@ def merge_pedagogical_maps(primary_map, fallback_map):
     return merged
 
 
+def load_open_anki_jlpt(folder_path):
+    """
+    Load vocabulary from open-anki-jlpt CSV files (n1.csv … n5.csv).
+    Format: expression,reading,meaning,tags,guid
+    Level is derived from the file name (n5 → N5, etc.).
+    Returns dict: word -> (level, source)
+    """
+    if not folder_path or not os.path.exists(folder_path):
+        return {}
+
+    level_files = {
+        'N5': 'n5.csv',
+        'N4': 'n4.csv',
+        'N3': 'n3.csv',
+        'N2': 'n2.csv',
+        'N1': 'n1.csv',
+    }
+
+    def _kata_to_hira(text):
+        chars = []
+        for char in str(text):
+            code = ord(char)
+            if 0x30A1 <= code <= 0x30F6:
+                chars.append(chr(code - 0x60))
+            else:
+                chars.append(char)
+        return ''.join(chars)
+
+    mapping = {}
+    for level, filename in level_files.items():
+        filepath = os.path.join(folder_path, filename)
+        if not os.path.exists(filepath):
+            continue
+        try:
+            df = pd.read_csv(filepath, dtype=str).fillna('')
+        except Exception:
+            continue
+        if 'expression' not in df.columns:
+            continue
+        for _, row in df.iterrows():
+            word = str(row['expression']).strip()
+            if not word:
+                continue
+            existing = mapping.get(word)
+            if existing is None or get_jlpt_level(level) < get_jlpt_level(existing[0]):
+                mapping[word] = (level, 'open-anki')
+
+            # Also index hiragana reading alias for kanji entries
+            reading_col = 'reading' if 'reading' in df.columns else None
+            if reading_col:
+                reading = str(row.get(reading_col, '')).strip()
+                if reading and reading != word and re.search(r'[\u3400-\u9fff々〆ヶ]', word):
+                    hira = _kata_to_hira(reading)
+                    if hira and hira != word:
+                        existing_hira = mapping.get(hira)
+                        if existing_hira is None or get_jlpt_level(level) < get_jlpt_level(existing_hira[0]):
+                            mapping[hira] = (level, 'open-anki')
+    return mapping
+
+
 def load_common_words(file_path):
     """Load common non-JLPT words to tag as CO when unknown."""
     if not file_path or not os.path.exists(file_path):
@@ -344,6 +404,9 @@ def is_kanji_or_katakana_word(text):
 
 
 def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None):
+    # Token d’une seule lettre latine (N, A, B...) = élément étranger, traité N5
+    if detail_key and re.fullmatch(r'[A-Za-z]', detail_key):
+        return 'N5'
     if detail_key and proper_nouns and detail_key in proper_nouns:
         return 'PN'
     if is_proper_noun_token(token):
@@ -452,6 +515,37 @@ def katakana_to_hiragana(text):
     return ''.join(chars)
 
 
+def potential_to_base(word):
+    """
+    Reconstruit la forme de dictionnaire d’un verbe potentiel godan en -\u3048\u308b.
+    Ex: \u8a00\u3048\u308b \u2192 \u8a00\u3046, \u66f8\u3051\u308b \u2192 \u66f8\u304f, \u8ac7\u305b\u308b \u2192 \u8ac7\u3059, \u4f1a\u3048\u308b \u2192 \u4f1a\u3046, \u8074\u304d\u53d6\u308c\u308b \u2192 \u8074\u304d\u53d6\u308b
+    Renvoie None si le mot ne correspond pas au pattern.
+    """
+    e_to_u = {
+        '\u3051': '\u304f',  # ke → ku
+        '\u305b': '\u3059',  # se → su
+        '\u3066': '\u3064',  # te → tsu
+        '\u306d': '\u306c',  # ne → nu
+        '\u3079': '\u3076',  # be → bu
+        '\u3081': '\u3080',  # me → mu
+        '\u308c': '\u308b',  # re → ru
+        '\u3052': '\u3050',  # ge → gu
+        '\u305c': '\u305a',  # ze → zu
+        '\u3067': '\u3065',  # de → du
+        '\u3078': '\u3075',  # he → fu
+        '\u3048': '\u3046',  # e → u
+    }
+    if not word or not word.endswith('\u308b') or len(word) < 3:
+        return None
+    pre = word[:-1]  # retire le \u308b final
+    if not pre:
+        return None
+    last_kana = pre[-1]
+    if last_kana not in e_to_u:
+        return None
+    return pre[:-1] + e_to_u[last_kana]
+
+
 def candidate_forms_for_lookup(base_form, surface, reading=None):
     """Build lookup candidates including honorific-prefix and reading variants."""
     candidates = []
@@ -478,6 +572,10 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
         if len(form) >= 2 and form[0] in {'お', 'ご'}:
             candidates.append('御' + form[1:])
             candidates.append(form[1:])
+        # Si la forme ressemble à un potentiel godan, ajouter aussi la base dict.
+        non_potential = potential_to_base(form)
+        if non_potential and non_potential not in candidates:
+            candidates.append(non_potential)
     return list(dict.fromkeys(candidates))
 
 
@@ -592,6 +690,27 @@ def pick_best_pedagogical_entry(pedagogical_map, candidates):
             best_entry = entry
             best_candidate = cand
     return best_entry, best_candidate
+
+
+def has_non_katakana_unknown(details_str):
+    """Return True if details contain an unknown token (?:) that is not katakana."""
+    if not details_str or details_str == '-':
+        return False
+
+    for part in str(details_str).split(','):
+        piece = part.strip()
+        if not piece or ':' not in piece:
+            continue
+        key, _sep, value = piece.rpartition(':')
+        key = key.strip()
+        value = value.strip()
+        if value != '?':
+            continue
+        if not key:
+            continue
+        if not is_katakana_word(key):
+            return True
+    return False
 
 
 def is_tokenization_artifact(token):
@@ -841,7 +960,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
     
     try:
         tokens = list(tokenizer.tokenize(sentence))
-        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map)
+        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, supplemental_map)
         consumed_by_name_span = set()
         has_katakana_proper_noun = any(
             is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
@@ -865,13 +984,17 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 continue
             # Compound check must happen before any filtering
             if idx in compound_matches:
-                word, strict_level, _, _ = compound_matches[idx]
-                if strict_level:
-                    if should_skip_vocab_due_to_grammar(word, strict_level, grammar_matches):
+                word, strict_level, supplemental_entry, _ = compound_matches[idx]
+                effective_level = strict_level
+                if not effective_level and supplemental_map and supplemental_entry:
+                    effective_level = supplemental_entry[0]
+
+                if effective_level:
+                    if should_skip_vocab_due_to_grammar(word, effective_level, grammar_matches):
                         continue
-                    level = get_jlpt_level(strict_level)
+                    level = get_jlpt_level(effective_level)
                     max_level = max(max_level, level)
-                    details[word] = strict_level
+                    details[word] = effective_level
                 else:
                     details[word] = unknown_vocab_tag(
                         token,
@@ -1222,9 +1345,11 @@ def process_sentences(
     kanji_file='data/jlpt_kanji.csv',
     pedagogical_file='data/jlpt_vocab_pedagogical.csv',
     bunpro_vocab_file='data/bunpro-voc-jlpt.csv',
+    bunpro_api_file='data/bunpro-jlpt-api.csv',
     proper_nouns_file='data/proper_nouns.csv',
     common_vocab_file='data/common_vocab.csv',
     variants_file='data/jmdict_word_variants.csv',
+    open_anki_folder='data/open-anki-jlpt',
     max_rows=None,
     offset=None,
     ids=None
@@ -1246,6 +1371,24 @@ def process_sentences(
         source_name='bunpro',
     )
     pedagogical_map = merge_pedagogical_maps(pedagogical_map, bunpro_fallback)
+
+    bunpro_api_by_query = load_word_level_source_map(
+        bunpro_api_file,
+        word_col='query',
+        level_col='jlpt_level',
+        source_name='bunpro-api',
+    )
+    bunpro_api_by_word = load_word_level_source_map(
+        bunpro_api_file,
+        word_col='word',
+        level_col='jlpt_level',
+        source_name='bunpro-api',
+    )
+    bunpro_api_fallback = merge_pedagogical_maps(bunpro_api_by_query, bunpro_api_by_word)
+    pedagogical_map = merge_pedagogical_maps(pedagogical_map, bunpro_api_fallback)
+
+    open_anki_fallback = load_open_anki_jlpt(open_anki_folder)
+    pedagogical_map = merge_pedagogical_maps(pedagogical_map, open_anki_fallback)
     proper_nouns = load_proper_nouns(proper_nouns_file)
     common_words = load_common_words(common_vocab_file)
     variants_map = load_word_variants(variants_file)
@@ -1253,6 +1396,8 @@ def process_sentences(
     print(f"Loaded kanji entries: {len(kanji_map)}")
     print(f"Loaded pedagogical overrides: {len(pedagogical_map)}")
     print(f"Loaded Bunpro fallback entries: {len(bunpro_fallback)}")
+    print(f"Loaded Bunpro API fallback entries: {len(bunpro_api_fallback)}")
+    print(f"Loaded Open-Anki-JLPT entries: {len(open_anki_fallback)}")
     print(f"Loaded proper nouns: {len(proper_nouns)}")
     print(f"Loaded common words (CO): {len(common_words)}")
     print(f"Loaded word variants: {len(variants_map)}")
@@ -1349,6 +1494,12 @@ def process_sentences(
         peda_num = get_jlpt_level(peda_level)
         final_no_kata_level = no_kata_level if (no_kata_num > 0 and no_kata_num < peda_num) else peda_level
 
+        # If there is an unknown non-katakana token, mark vocab levels as unknown.
+        if has_non_katakana_unknown(vocab_detail):
+            vocab_level = '?'
+            peda_level = '?'
+            final_no_kata_level = '?'
+
         kanji_level, kanji_detail = analyze_kanji(analysis_sentence, kanji_map)
         grammar_level, grammar_detail = analyze_grammar(analysis_sentence, grammar_patterns, precomputed_matches=grammar_matches)
 
@@ -1400,6 +1551,29 @@ def resolve_output_file(user_output, max_rows=None, offset=None):
         return 'output/sentences-with-levels-test.csv'
     return 'output/sentences-with-levels.csv'
 
+
+def filter_unknown_vocab_rows(output_df, detail_columns=None):
+    """
+    Debug helper: keep only rows containing unknown vocab markers ':?'
+    in one of the specified detail columns.
+    """
+    if output_df is None or output_df.empty:
+        return output_df
+
+    if not detail_columns:
+        detail_columns = ['vocab_details', 'vocab_pedagogical_details']
+
+    valid_columns = [col for col in detail_columns if col in output_df.columns]
+    if not valid_columns:
+        return output_df.iloc[0:0].copy()
+
+    mask = pd.Series(False, index=output_df.index)
+    for col in valid_columns:
+        mask = mask | output_df[col].fillna('').astype(str).str.contains(':\\?', regex=True)
+
+    filtered_df = output_df[mask].copy()
+    return filtered_df
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='JLPT analyzer for Japanese sentences')
     parser.add_argument('--input', default='input/sentences-only.csv', help='Input CSV path')
@@ -1408,6 +1582,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab', default='data/jlpt_vocab.csv', help='Vocabulary JLPT CSV path')
     parser.add_argument('--kanji', default='data/jlpt_kanji.csv', help='Kanji JLPT CSV path')
     parser.add_argument('--bunpro-vocab', default='data/bunpro-voc-jlpt.csv', help='Bunpro vocab CSV path')
+    parser.add_argument('--bunpro-api', default='data/bunpro-jlpt-api.csv', help='Bunpro API vocab CSV path')
     parser.add_argument('--proper-nouns', default='data/proper_nouns.csv', help='Proper nouns CSV path')
     parser.add_argument('--common-vocab', default='data/common_vocab.csv', help='Common non-JLPT vocab CSV path for CO tagging')
     parser.add_argument('--variants', default='data/jmdict_word_variants.csv', help='Word variants CSV path for lexical variant lookup')
@@ -1415,6 +1590,9 @@ if __name__ == '__main__':
     parser.add_argument('--offset', type=int, default=None, help='Skip first N rows before processing')
     parser.add_argument('--ids', default=None, help='Comma-separated IDs to process (e.g. 4058,4372,4434,4498)')
     parser.add_argument('--pedagogical', default='data/jlpt_vocab_pedagogical.csv', help='Pedagogical overrides CSV path')
+    parser.add_argument('--open-anki', default='data/open-anki-jlpt', help='Folder containing open-anki-jlpt CSV files (n1.csv…n5.csv)')
+    parser.add_argument('--unknown-only', action='store_true', help="Debug mode: keep only rows with ':?' unknown vocab markers")
+    parser.add_argument('--unknown-columns', default='vocab_details,vocab_pedagogical_details', help='Comma-separated detail columns scanned by --unknown-only')
     args = parser.parse_args()
 
     ids_list = None
@@ -1434,14 +1612,24 @@ if __name__ == '__main__':
         vocab_file=args.vocab,
         kanji_file=args.kanji,
         bunpro_vocab_file=args.bunpro_vocab,
+        bunpro_api_file=args.bunpro_api,
         proper_nouns_file=args.proper_nouns,
         common_vocab_file=args.common_vocab,
         variants_file=args.variants,
         pedagogical_file=args.pedagogical,
+        open_anki_folder=args.open_anki,
         max_rows=args.max_rows,
         offset=args.offset,
         ids=ids_list
     )
+
+    if args.unknown_only:
+        unknown_columns = [c.strip() for c in str(args.unknown_columns).split(',') if c.strip()]
+        filtered = filter_unknown_vocab_rows(result, detail_columns=unknown_columns)
+        print(f"Debug unknown-only filter: {len(filtered)}/{len(result)} rows kept")
+        print(f"Writing filtered debug output to {output_file}...")
+        filtered.to_csv(output_file, sep=';', index=False, encoding='utf-8')
+        result = filtered
     
     # Show sample
     print("\nSample of results:")
