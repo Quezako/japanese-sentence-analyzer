@@ -57,4 +57,8 @@ pattern|jlpt_level|description|pattern_type
 もの|N4|Chose, personne|noun
 です|N5|Copule formelle|verb_form
 ですか|N5|Question formelle|verb_form
+ます|N5|Présent/futur poli|verb_form
+います|N5|Verbe d'existence animé à la forme polie|verb_form
 かしこまりました|N4|Expression polie de service|expression
+かえって|N5|Forme en て de 帰る / au contraire selon contexte|expression
+頑張ってください|N4|Expression d'encouragement polie très courante|expression
