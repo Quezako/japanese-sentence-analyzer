@@ -427,13 +427,20 @@ def is_kanji_or_katakana_word(text):
     return bool(re.fullmatch(r'[\u4e00-\u9fff々\u30A0-\u30FF\uFF66-\uFF9FA-Za-zＡ-Ｚａ-ｚ]+', text))
 
 
-def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None, bunpro_raw_map=None):
+def unknown_vocab_tag(
+    token,
+    detail_key=None,
+    proper_nouns=None,
+    common_words=None,
+    candidates=None,
+    prev_token=None,
+    next_token=None,
+    bunpro_unclassified_words=None,
+    bunpro_all_words=None,
+):
     # Mot romaji/alphanumérique ASCII ou fullwidth (ＡＪＬＰＴ, ＬＤＫ, etc.) → N5
     if detail_key and re.fullmatch(r'[A-Za-z0-9Ａ-Ｚａ-ｚ０-９]+', detail_key):
         return 'N5'
-    # Katakana inconnu hors listes JLPT → tag KA
-    if detail_key and is_katakana_word(detail_key):
-        return 'KA'
     if detail_key and proper_nouns and detail_key in proper_nouns:
         return 'PN'
     if is_proper_noun_token(token):
@@ -469,10 +476,28 @@ def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=No
         for value in candidate_values:
             if value in common_words:
                 return 'CO'
+
+    # Katakana unknown tagging is a last resort:
+    # - KA  => found in Bunpro API but explicitly NUNCLASSIFIED
+    # - KA? => katakana token absent from Bunpro API and all known data sources
+    is_katakana_candidate = any(is_katakana_word(value) for value in candidate_values)
+    if is_katakana_candidate and candidate_values:
+        if bunpro_unclassified_words:
+            for value in candidate_values:
+                if value in bunpro_unclassified_words:
+                    return 'KA'
+
+        if bunpro_all_words:
+            for value in candidate_values:
+                if value in bunpro_all_words:
+                    return '?'
+
+        return 'KA?'
+
     # Mot présent dans Bunpro mais sans niveau JLPT (NUNCLASSIFIED) → UNC
-    if bunpro_raw_map and candidate_values:
+    if bunpro_all_words and candidate_values:
         for value in candidate_values:
-            if value in bunpro_raw_map:
+            if value in bunpro_all_words:
                 return 'UNC'
     return '?'
 
@@ -664,6 +689,39 @@ def get_prev_token_join_candidates(tokens, idx, max_prefix_len=8):
             expanded.append(non_potential)
 
     return list(dict.fromkeys([cand for cand in expanded if cand]))
+
+
+def get_prev_kana_sequence_join_candidates(tokens, idx, max_back_tokens=4):
+    """Join contiguous previous kana tokens with current token (e.g. ね+み+ー -> ねみー)."""
+    if idx <= 0 or idx >= len(tokens):
+        return []
+
+    current_surface = tokens[idx].surface if hasattr(tokens[idx], 'surface') else ''
+    current_base = tokens[idx].base_form if hasattr(tokens[idx], 'base_form') else current_surface
+    if not current_surface or not re.fullmatch(r'[ぁ-ゖー]+', current_surface):
+        return []
+
+    seq = []
+    pointer = idx - 1
+    while pointer >= 0 and len(seq) < max_back_tokens:
+        prev_surface = tokens[pointer].surface if hasattr(tokens[pointer], 'surface') else ''
+        if not prev_surface or not re.fullmatch(r'[ぁ-ゖー]+', prev_surface):
+            break
+        seq.append(prev_surface)
+        pointer -= 1
+
+    if not seq:
+        return []
+
+    seq = list(reversed(seq))
+    candidates = []
+    for size in range(1, len(seq) + 1):
+        prefix = ''.join(seq[-size:])
+        candidates.append(prefix + current_surface)
+        if current_base and current_base != '*' and re.fullmatch(r'[ぁ-ゖー]+', current_base):
+            candidates.append(prefix + current_base)
+
+    return list(dict.fromkeys([cand for cand in candidates if cand]))
 
 
 def get_prev_honorific_residue_candidates(tokens, idx):
@@ -1169,6 +1227,109 @@ def has_non_katakana_unknown(details_str):
     return False
 
 
+def best_level_from_details(*details_candidates):
+    """Infer best non-empty level/tag from one or more details strings.
+    Priority: JLPT > PN > CO > KA > KA? > ?"""
+    max_jlpt = 0
+    has_pn = False
+    has_co = False
+    has_ka = False
+    has_ka_unknown = False
+    has_unknown = False
+
+    for details_str in details_candidates:
+        if not details_str or details_str == '-':
+            continue
+        for part in str(details_str).split(','):
+            piece = part.strip()
+            if not piece or ':' not in piece:
+                continue
+            _key, _sep, raw_value = piece.rpartition(':')
+            value = str(raw_value).strip()
+            if not value:
+                continue
+            normalized = value.split('@', 1)[0].strip().upper()
+            jlpt_num = get_jlpt_level(normalized)
+            if jlpt_num > 0:
+                max_jlpt = max(max_jlpt, jlpt_num)
+                continue
+            if normalized == 'PN':
+                has_pn = True
+            elif normalized == 'CO':
+                has_co = True
+            elif normalized == 'KA':
+                has_ka = True
+            elif normalized == 'KA?':
+                has_ka_unknown = True
+            elif normalized == '?':
+                has_unknown = True
+
+    if max_jlpt > 0:
+        return numeric_to_jlpt(max_jlpt)
+    if has_pn:
+        return 'PN'
+    if has_co:
+        return 'CO'
+    if has_ka:
+        return 'KA'
+    if has_ka_unknown:
+        return 'KA?'
+    if has_unknown:
+        return '?'
+    return '?'
+
+
+def apply_level_fallback(level, *details_candidates):
+    """Keep explicit level when present, otherwise infer from details."""
+    if level and str(level).strip() and str(level).strip() != '-':
+        return level
+    return best_level_from_details(*details_candidates)
+
+
+def backfill_level_from_sentence_context(level, grammar_level, kanji_level):
+    """When vocab stays unknown, backfill with sentence-level JLPT clues."""
+    normalized = str(level).strip() if level is not None else ''
+    if get_jlpt_level(normalized) > 0:
+        return normalized
+    if normalized in {'PN', 'CO', 'KA', 'KA?', 'UNC'}:
+        return normalized
+
+    grammar_norm = str(grammar_level).strip() if grammar_level is not None else ''
+    if get_jlpt_level(grammar_norm) > 0:
+        return grammar_norm
+
+    kanji_norm = str(kanji_level).strip() if kanji_level is not None else ''
+    if get_jlpt_level(kanji_norm) > 0:
+        return kanji_norm
+
+    return '?' if normalized in {'', '-'} else normalized
+
+
+def infer_sentence_special_vocab_level(sentence):
+    """Detect very short non-lexical sentences and colloquial utterances for fallback tagging."""
+    text = str(sentence).strip()
+    if not text:
+        return None
+
+    compact = re.sub(r'[\s"“”「」『』()（）\[\]{}。、,，．・!！?？…]+', '', text)
+    if not compact:
+        return None
+
+    if re.fullmatch(r'[A-Za-z0-9Ａ-Ｚａ-ｚ０-９]+', compact):
+        return 'N5'
+
+    if re.fullmatch(r'[0-9０-９一二三四五六七八九十百千万億兆/:+\-=×÷\.．,，]+', compact):
+        return 'N5'
+
+    if compact in {'ちゅうううう', 'きたねー', 'はえー', 'よえー'}:
+        return 'CO'
+
+    if re.fullmatch(r'[ぁ-ゖー]{2,}', compact) and ('ー' in compact or re.search(r'(.)\1\1', compact)):
+        return 'CO'
+
+    return None
+
+
 SMALL_KANA = frozenset('ぁぃぅぇぉゃゅょっ')
 
 
@@ -1614,7 +1775,7 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
     return matches, consumed
 
 
-def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, raw_fallback_map=None, variants_map=None, bunpro_raw_map=None, hira_map=None):
+def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, raw_fallback_map=None, variants_map=None, bunpro_unclassified_words=None, bunpro_all_words=None, hira_map=None):
     """
     Analyze vocabulary in sentence and return highest JLPT level.
     Uses janome tokenizer to handle conjugated verbs and complex words.
@@ -1679,7 +1840,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                         common_words=common_words,
                         prev_token=prev_token,
                         next_token=next_token,
-                    bunpro_raw_map=bunpro_raw_map,
+                        bunpro_unclassified_words=bunpro_unclassified_words,
+                        bunpro_all_words=bunpro_all_words,
                     )
                 continue
 
@@ -1741,6 +1903,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
             lookup_candidates.extend(get_small_kana_prefix_candidates(tokens, idx, hira_map))
             lookup_candidates.extend(get_prev_token_join_candidates(tokens, idx))
+            lookup_candidates.extend(get_prev_kana_sequence_join_candidates(tokens, idx))
             honorific_residue_candidates = get_prev_honorific_residue_candidates(tokens, idx)
             lookup_candidates.extend(honorific_residue_candidates)
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
@@ -1820,7 +1983,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     candidates=lookup_candidates,
                     prev_token=prev_token,
                     next_token=next_token,
-                    bunpro_raw_map=bunpro_raw_map,
+                    bunpro_unclassified_words=bunpro_unclassified_words,
+                    bunpro_all_words=bunpro_all_words,
                 )
     except Exception as e:
         print(f"Error analyzing vocabulary in '{sentence}': {e}")
@@ -1830,7 +1994,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
         return raw_max_label, details_str
     return numeric_to_jlpt(max_level), details_str
 
-def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, raw_fallback_map=None, variants_map=None, bunpro_raw_map=None, hira_map=None):
+def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, raw_fallback_map=None, variants_map=None, bunpro_unclassified_words=None, bunpro_all_words=None, hira_map=None):
     """
     Same as analyze_vocabulary but overrides levels from pedagogical_map.
     Returns (level, details_str) only if the result differs from the strict analysis.
@@ -1915,7 +2079,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         common_words=common_words,
                         prev_token=prev_token,
                         next_token=next_token,
-                    bunpro_raw_map=bunpro_raw_map,
+                        bunpro_unclassified_words=bunpro_unclassified_words,
+                        bunpro_all_words=bunpro_all_words,
                     )
                 continue
 
@@ -1982,6 +2147,7 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
             lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
             lookup_candidates.extend(get_small_kana_prefix_candidates(tokens, idx, hira_map))
             lookup_candidates.extend(get_prev_token_join_candidates(tokens, idx))
+            lookup_candidates.extend(get_prev_kana_sequence_join_candidates(tokens, idx))
             honorific_residue_candidates = get_prev_honorific_residue_candidates(tokens, idx)
             lookup_candidates.extend(honorific_residue_candidates)
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
@@ -2081,7 +2247,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                             candidates=lookup_candidates,
                             prev_token=prev_token,
                             next_token=next_token,
-                            bunpro_raw_map=bunpro_raw_map,
+                            bunpro_unclassified_words=bunpro_unclassified_words,
+                            bunpro_all_words=bunpro_all_words,
                         )
     except Exception as e:
         print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
@@ -2191,13 +2358,21 @@ def process_sentences(
         raw_col='jlpt_level_raw',
         source_name='bunpro-api-raw',
     )
-    # Set of all words known to Bunpro API (including NUNCLASSIFIED ones) for UNC tagging
+    # Bunpro API sets used for last-resort katakana tagging.
     bunpro_api_all_words = set()
+    bunpro_api_unclassified_words = set()
     if bunpro_api_file and os.path.exists(bunpro_api_file):
         try:
             _bp_df = pd.read_csv(bunpro_api_file, sep='|', dtype=str).fillna('')
             if 'word' in _bp_df.columns:
-                bunpro_api_all_words = set(_bp_df['word'].str.strip())
+                for _, row in _bp_df.iterrows():
+                    word = str(row.get('word', '')).strip()
+                    if not word:
+                        continue
+                    bunpro_api_all_words.add(word)
+                    raw_level = str(row.get('jlpt_level_raw', '')).strip().upper()
+                    if raw_level == 'NUNCLASSIFIED':
+                        bunpro_api_unclassified_words.add(word)
         except Exception:
             pass
 
@@ -2212,6 +2387,7 @@ def process_sentences(
     print(f"Loaded Bunpro fallback entries: {len(bunpro_fallback)}")
     print(f"Loaded Bunpro API fallback entries: {len(bunpro_api_fallback)}")
     print(f"Loaded Bunpro API raw fallback entries: {len(bunpro_api_raw_fallback)}")
+    print(f"Loaded Bunpro API unclassified entries: {len(bunpro_api_unclassified_words)}")
     print(f"Loaded Open-Anki-JLPT entries: {len(open_anki_fallback)}")
     print(f"Loaded proper nouns: {len(proper_nouns)}")
     print(f"Loaded common words (CO): {len(common_words)}")
@@ -2265,6 +2441,7 @@ def process_sentences(
     no_katakana_levels = []
     vocab_peda_levels = []
     vocab_peda_details = []
+    no_katakana_details = []
     kanji_levels = []
     kanji_details = []
     grammar_levels = []
@@ -2288,7 +2465,8 @@ def process_sentences(
             supplemental_map=pedagogical_map,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
-            bunpro_raw_map=bunpro_api_all_words,
+            bunpro_unclassified_words=bunpro_api_unclassified_words,
+            bunpro_all_words=bunpro_api_all_words,
             hira_map=hira_to_kanji,
         )
         peda_level, peda_detail = analyze_vocab_pedagogical(
@@ -2300,13 +2478,14 @@ def process_sentences(
             common_words=common_words,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
-            bunpro_raw_map=bunpro_api_all_words,
+            bunpro_unclassified_words=bunpro_api_unclassified_words,
+            bunpro_all_words=bunpro_api_all_words,
             hira_map=hira_to_kanji,
         )
         # Déduplication : ne garder dans peda_detail que ce qui diffère de vocab_detail
         if peda_detail != '-':
             peda_detail = diff_details_str(peda_detail, vocab_detail)
-        no_kata_level, _ = analyze_vocab_pedagogical(
+        no_kata_level, no_kata_detail = analyze_vocab_pedagogical(
             analysis_sentence,
             vocab_map,
             pedagogical_map,
@@ -2316,7 +2495,8 @@ def process_sentences(
             common_words=common_words,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
-            bunpro_raw_map=bunpro_api_all_words,
+            bunpro_unclassified_words=bunpro_api_unclassified_words,
+            bunpro_all_words=bunpro_api_all_words,
             hira_map=hira_to_kanji,
         )
 
@@ -2334,19 +2514,36 @@ def process_sentences(
         kanji_level, kanji_detail = analyze_kanji(analysis_sentence, kanji_map)
         grammar_level, grammar_detail = analyze_grammar(analysis_sentence, grammar_patterns, precomputed_matches=grammar_matches)
 
+        vocab_level = apply_level_fallback(vocab_level, vocab_detail)
+        peda_level = apply_level_fallback(peda_level, peda_detail, vocab_detail)
+        final_no_kata_level = apply_level_fallback(final_no_kata_level, no_kata_detail, peda_detail, vocab_detail)
+
+        vocab_level = backfill_level_from_sentence_context(vocab_level, grammar_level, kanji_level)
+        peda_level = backfill_level_from_sentence_context(peda_level, grammar_level, kanji_level)
+        final_no_kata_level = backfill_level_from_sentence_context(final_no_kata_level, grammar_level, kanji_level)
+
+        sentence_special_level = infer_sentence_special_vocab_level(analysis_sentence)
+        if sentence_special_level:
+            if vocab_level == '?':
+                vocab_level = sentence_special_level
+            if peda_level == '?':
+                peda_level = sentence_special_level
+            if final_no_kata_level == '?':
+                final_no_kata_level = sentence_special_level
+
         vocab_levels.append(vocab_level)
         vocab_details.append(vocab_detail)
         no_katakana_levels.append(final_no_kata_level)
         vocab_peda_levels.append(peda_level)
         vocab_peda_details.append(peda_detail)
+        no_katakana_details.append(no_kata_detail)
         kanji_levels.append(kanji_level)
         kanji_details.append(kanji_detail)
         grammar_levels.append(grammar_level)
         grammar_details.append(grammar_detail)
     
-    # Create output dataframe
-    output_df = df.copy()
-    output_df.columns = ['id', 'sentence']
+    # Create output dataframe from canonical input columns only
+    output_df = df[['id', 'sentence']].copy()
     output_df['jlpt_no_katakana'] = no_katakana_levels
     output_df['vocab_jlpt_pedagogical'] = vocab_peda_levels
     output_df['vocab_pedagogical_details'] = vocab_peda_details
