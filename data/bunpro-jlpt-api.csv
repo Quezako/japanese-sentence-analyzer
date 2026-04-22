@@ -1,485 +1,1122 @@
-query|word|reading|meaning|jlpt_level|jlpt_level_raw|tags
-始発|始発|しはつ|first departure (of the day: train, bus, etc.), first train, first bus, departing one's home station (of a train, bus, etc.)|N1|N1|n
-始発|始発駅|しはつえき|starting station||NUNCLASSIFIED|n
-始発|始発電車|しはつでんしゃ|first train (of the day)||NUNCLASSIFIED|n
-出来上がる|出来上がる|できあがる|to be completed, to be finished, to be ready (e.g. to serve or eat), to be very drunk|N2|N2|v5r vi
-コンクール|コンクール|コンクール|competition, contest|N3|N3|n
-コンクール|合唱コンクール|がっしょうコンクール|choral competition||NUNCLASSIFIED|n
-コンクール|音楽コンクール|おんがくコンクール|musical competition||NUNCLASSIFIED|n
-凝る|凝る|こごる|to congeal, to freeze|N2|N2|v5r vi
-凝る|碁に凝ると親の死に目に逢わぬ|ごにこるとおやのしにめにあわぬ|if you get too absorbed when playing go, you will miss your parent's deathbed||NUNCLASSIFIED|exp
-凝る|肩が凝る|かたがこる|to have stiff shoulders||NUNCLASSIFIED|exp v5r adj-f
-凝る|凝る|しこる|to stiffen, to harden||NUNCLASSIFIED|v5r vi
-凝る|凝る|こる|to grow stiff, to be absorbed in, to be devoted to, to be a fanatic, to elaborate||NA5|v5r vi
-ひっくり返す|ひっくり返す|ひっくりかえす|to turn over, to turn upside down, to turn up, to turn inside out, to turn out, to knock over, to tip over, to overturn (e.g. a decision), to upset, to reverse|N3|N3|v5s vt
-ストレス|ストレス|ストレス|stress|N5|N5|n
-ストレス|心的外傷後ストレス障害|しんてきがいしょうごすとれるしょうがい|post-traumatic stress disorder, PTSD||NA16|n
-ストレス|プレストレストコンクリート|プレストレストコンクリート|prestressed concrete||NUNCLASSIFIED|n
-ストレス|ストレスフリー|ストレスフリー|stress-free||NUNCLASSIFIED|adj-na
-ストレス|テクノストレス|テクノストレス|techno-stress||NUNCLASSIFIED|n
-ストレス|環境ストレス|かんきょうストレス|environmental stress||NUNCLASSIFIED|n
-ストレス|精神的ストレス|せいしんてきストレス|psychological stress||NUNCLASSIFIED|n
-ストレス|急性ストレス障害|きゅうせいストレスしょうがい|acute stress disorder, ASD||NUNCLASSIFIED|n
-ストレス|ストレス発散|ストレスはっさん|stress relief, stress release, blowing off steam||NUNCLASSIFIED|n
-ストレス|酸化ストレス|さんかストレス|oxidative stress||NUNCLASSIFIED|n
-ストレス|ノーストレス|ノーストレス|stress-free||NUNCLASSIFIED|adj-no n
-ストレス|ゴーストレストラン|ゴーストレストラン|ghost kitchen, virtual restaurant||NUNCLASSIFIED|n
-ストレス|主人在宅ストレス症候群|しゅじんざいたくストレスしょうこうぐん|retired husband syndrome, stress syndrome resulting from one's husband being at home||NUNCLASSIFIED|n
-ストレス|ストレステスト|ストレステスト|stress test||NUNCLASSIFIED|n
-ストレス|ストレス性|ストレスせい|stress-induced, stress-related||NUNCLASSIFIED|adj-no
-ストレス|ミストレス|ミストレス|mistress||NUNCLASSIFIED|n
-ストレス|ストレスコントロール|ストレスコントロール|stress control||NUNCLASSIFIED|n
-ストレス|ストレス病|ストレスびょう|stress-related disease||NUNCLASSIFIED|n
-ストレス|ストレス障害|ストレスしょうがい|stress disorder||NUNCLASSIFIED|n
-ストレス|ストレス耐性|ストレスたいせい|stress resistance, stress tolerance||NUNCLASSIFIED|n
-ストレス|ストレス潰瘍|ストレスかいよう|stress ulcer||NUNCLASSIFIED|n
-ストレス|ストレス解消|ストレスかいしょう|stress reduction||NUNCLASSIFIED|n
-本気|本気で|ほんきで|seriously, in earnest, for real, all out, really, with a will||NA1|adv
-本気|本気|ほんき|seriousness, earnestness, truth, sanctity|N2|N2|n adj-no adj-na
-本気|一本気|いっぽんぎ|single-minded (esp. personality or person), one-track mind||NA2|adj-na n
-本気|本気度|ほんきど|(degree of) seriousness, level of commitment||NUNCLASSIFIED|n
-本気|日本気象協会|にほんきしょうきょうかい|Japan Weather Association, JWA||NUNCLASSIFIED|n
-本気|本気にする|ほんきにする|to take seriously, to believe in, to fall for||NA1|exp vs-i
-本気|本気を出す|ほんきをだす|to make a serious effort||NA3|exp v5s
-退かす|退かす|どかす|to remove, to move out of the way||NA9|v5s vt
-申し込み|オンライン申し込み|オンラインもうしこみ|online sign-up||NUNCLASSIFIED|n
-申し込み|申し込み順|もうしこみじゅん|order of applications, in order of application||NUNCLASSIFIED|n
-申し込み|申込書|もうしこみしょ|(written) application, application form||NUNCLASSIFIED|n
-申し込み|参加申し込み|さんかもうしこみ|application (to take part in), registration||NUNCLASSIFIED|n
-申し込み|求職申し込み|きゅうしょくもうしこみ|job application||NUNCLASSIFIED|n
-申し込み|申し込み|もうしこみ|application, entry, request, subscription, offer, proposal, overture, challenge|N4|N4|n
-申し込み|申込締切|もうしこみしめきり|application deadline||NUNCLASSIFIED|n
-正社員|正社員|せいしゃいん|regular employee, permanent employee, full-time employee||NA10|n
-正社員|非正社員|ひせいしゃいん|non-fulltime employee, non-permanent employee||NUNCLASSIFIED|n
-追い越す|追い越す|おいこす|to pass (e.g. car), to overtake, to surpass, to outstrip, to get ahead of, to outdistance|N2|N2|v5s vt
-にわか雨|にわか雨|にわかあめ|rain shower||NA14|n
-フライパン|フライパン|フライパン|fry pan, frying pan|N3|N3|n
-不景気|不景気|ふけいき|business recession, hard times, depression, gloom, sullenness, cheerlessness|N1|N1|n adj-na
-個性|個性|こせい|individuality, personality, idiosyncrasy|N2|N2|n
-個性|個性派|こせいは|unique type, one of a kind||NUNCLASSIFIED|n
-個性|個性を伸ばす|こせいをのばす|to promote individuality, to develop character, to draw out (e.g. a child's) individuality||NUNCLASSIFIED|exp v5s
-個性|個性豊か|こせいゆたか|rich in personality, of great individuality, highly individual, expressive of one's personality||NA8|adj-na
-個性|個性的|こせいてき|individual, distinctive, unique, characteristic, personal, idiosyncratic||NA6|adj-na
-個性|没個性|ぼつこせい|lack of individuality or personality||NUNCLASSIFIED|n
-個性|没個性的|ぼつこせいてき|impersonal||NUNCLASSIFIED|adj-na
-払い戻せる||||||
-甘やかす|甘やかす|あまやかす|to pamper, to spoil|N2|N2|v5s vt
-名札|名札|なふだ|name plate, name tag, label|N2|N2|n
-乗り越す|乗り越す|のりこす|to ride past (one's stop), to overshoot, to climb over, to get over, to overtake (a vehicle), to pass||NA20|v5s vt
-乗車|定期乗車券|ていきじょうしゃけん|commuter pass, season ticket||NUNCLASSIFIED|n
-乗車|乗車駅|じょうしゃえき|entraining point||NUNCLASSIFIED|n
-乗車|乗車口|じょうしゃぐち|entrance (for passengers at a train station)||NUNCLASSIFIED|n
-乗車|乗車賃|じょうしゃちん|railway fare||NUNCLASSIFIED|n
-乗車|不正乗車|ふせいじょうしゃ|unauthorized travel, riding without a valid ticket (e.g. on a train), stealing a ride||NUNCLASSIFIED|n
-乗車|無賃乗車|むちんじょうしゃ|riding free of charge||NUNCLASSIFIED|n
-乗車|乗車拒否|じょうしゃきょひ|refusing to allow a passenger on board a train or into a bus or taxi||NUNCLASSIFIED|n
-乗車|キセル乗車|キセルじょうしゃ|cheating on train fare by buying tickets covering only the first and last portions of the journey||NUNCLASSIFIED|n vs
-乗車|乗車券|じょうしゃけん|ticket (for bus, train, etc.), passenger ticket|N5|N5|n
-乗車|往復乗車券|おうふくじょうしゃけん|round-trip ticket (for a train, bus, etc.)||NUNCLASSIFIED|n
-乗車|乗車証|じょうしゃしょう|transport pass||NUNCLASSIFIED|n
-乗車|乗車位置|じょうしゃいち|boarding position (e.g. on train platform)||NUNCLASSIFIED|n
-乗車|試乗車|しじょうしゃ|demonstration model (car)||NUNCLASSIFIED|n
-乗車|駆け込み乗車|かけこみじょうしゃ|rushing to get on the train (bus, etc.) before the door closes||NUNCLASSIFIED|n
-乗車|乗車定員|じょうしゃていいん|riding capacity, seating capacity||NUNCLASSIFIED|n
-乗車|乗車時間|じょうしゃじかん|riding time, time spent aboard a bus, train etc.||NUNCLASSIFIED|n
-乗車|乗車|じょうしゃ|taking a train/bus, etc., to ride (a train), to get on (a bus), entraining|N2|N2|n vs vi
-行列|大名行列|だいみょうぎょうれつ|daimyo's procession||NUNCLASSIFIED|n
-行列|急行列車|きゅうこうれっしゃ|express train||NUNCLASSIFIED|n
-行列|待ち行列理論|まちぎょうれつりろん|queueing theory||NUNCLASSIFIED|n
-行列|計画行列|けいかくぎょうれつ|design matrix||NUNCLASSIFIED|n
-行列|夜行列車|やこうれっしゃ|night train||NUNCLASSIFIED|n
-行列|行列|ぎょうれつ|line, queue, procession, parade, matrix|N2|N2|n vs
-行列|正則行列|せいそくぎょうれつ|regular matrix||NUNCLASSIFIED|n
-行列|小行列式|しょうぎょうれつしき|minor (determinant)||NUNCLASSIFIED|n
-行列|共分散行列|きょうぶんさんぎょうれつ|covariance matrix||NUNCLASSIFIED|n
-行列|疎行列|そぎょうれつ|sparse matrix||NUNCLASSIFIED|n
-行列|三角行列|さんかくぎょうれつ|triangular matrix||NUNCLASSIFIED|n
-行列|下三角行列|したさんかくぎょうれつ|lower triangular matrix||NUNCLASSIFIED|n
-行列|部分行列|ぶぶんぎょうれつ|submatrix||NUNCLASSIFIED|n
-行列|回転行列|かいてんぎょうれつ|rotation matrix||NUNCLASSIFIED|n
-行列|属性値行列|ぞくせいちぎょうれつ|attribute-value matrix, AVM||NUNCLASSIFIED|n
-行列|交代行列|こうたいぎょうれつ|skew-symmetric matrix||NUNCLASSIFIED|n
-行列|関数行列式|かんすうぎょうれつしき|Jacobian||NUNCLASSIFIED|n
-行列|ゼロ行列|ゼロぎょうれつ|zero matrix, null matrix||NUNCLASSIFIED|n
-行列|拡大行列|かくだいぎょうれつ|augmented matrix||NUNCLASSIFIED|n
-行列|係数行列|けいすうぎょうれつ|coefficient matrix||NUNCLASSIFIED|n
-行列|行列記法|ぎょうれつきほう|matrix notation||NUNCLASSIFIED|n
-行列|行列要素|ぎょうれつようそ|matrix element||NUNCLASSIFIED|n
-行列|待ち行列に入れる|まちぎょうれつにいれる|to enqueue||NUNCLASSIFIED|exp v1
-行列|事象待ち行列|じしょうまちぎょうれつ|event queue||NUNCLASSIFIED|n
-行列|出力待ち行列|しゅつりょくまちぎょうれつ|output queue||NUNCLASSIFIED|n
-行列|対角行列|たいかくぎょうれつ|diagonal matrix||NUNCLASSIFIED|n
-行列|待ち行列|まちぎょうれつ|queue||NUNCLASSIFIED|n
-行列|非正則行列|ひせいそくぎょうれつ|singular matrix||NUNCLASSIFIED|n
-行列|副待ち行列|ふくまちぎょうれつ|sub-queue||NUNCLASSIFIED|n
-行列|行列演算|ぎょうれつえんざん|matrix operation||NUNCLASSIFIED|n
-行列|行列店|ぎょうれつてん|restaurant with long lines||NUNCLASSIFIED|n
-行列|行列代数|ぎょうれつだいすう|linear algebra, matrix algebra||NUNCLASSIFIED|n
-行列|行列表現|ぎょうれつひょうげん|matrix representation||NUNCLASSIFIED|n
-行列|随伴行列|ずいはんぎょうれつ|adjoint matrix, Hermitian conjugate||NUNCLASSIFIED|n
-行列|仮装行列|かそうぎょうれつ|costume parade||NA13|n
-行列|ビュー写像変換行列|ビューしゃぞうへんかんぎょうれつ|view mapping matrix||NUNCLASSIFIED|n
-行列|ビュー方向変換行列|ビューほうこうへんかんぎょうれつ|view orientation matrix||NUNCLASSIFIED|n
-行列|対称行列|たいしょうぎょうれつ|symmetric matrix||NUNCLASSIFIED|n
-行列|行列式|ぎょうれつしき|determinant||NUNCLASSIFIED|n
-行列|正方行列|せいほうぎょうれつ|square matrix||NUNCLASSIFIED|n
-行列|単位行列|たんいぎょうれつ|identity matrix, unit matrix||NUNCLASSIFIED|n
-行列|転置行列|てんちぎょうれつ|transposed matrix, transpose||NUNCLASSIFIED|n
-行列|零行列|れいぎょうれつ|zero matrix, null matrix||NUNCLASSIFIED|n
-行列|提灯行列|ちょうちんぎょうれつ|lantern procession||NUNCLASSIFIED|n
-行列|待ち行列方式|まちぎょうれつほうしき|queue-driven||NUNCLASSIFIED|n adj-no
-行列|魔方陣行列|まほうじんぎょうれつ|magic square (matrix)||NUNCLASSIFIED|n
-行列|特別急行列車|とくべつきゅうこうれっしゃ|limited express train||NUNCLASSIFIED|n
-行列|旗行列|はたぎょうれつ|flag procession||NUNCLASSIFIED|n
-行列|特異行列|とくいぎょうれつ|singular matrix||NUNCLASSIFIED|n
-行列|待ち行列名|まちぎょうれつめい|queue name||NUNCLASSIFIED|n
-行列|正規行列|せいきぎょうれつ|normal matrix||NUNCLASSIFIED|n
-行列|上三角行列|うえさんかくぎょうれつ|upper triangular matrix||NUNCLASSIFIED|n
-行列|ブロック行列|ブロックぎょうれつ|block matrix||NUNCLASSIFIED|n
-行列|基本行列|きほんぎょうれつ|elementary matrix||NUNCLASSIFIED|n
-行列|逆行列|ぎゃくぎょうれつ|inverse matrix||NUNCLASSIFIED|n
-恋愛|恋愛|れんあい|love, love-making, passion, emotion, affections, romance|N2|N2|n vs vi adj-no
-恋愛|恋愛映画|れんあいえいが|romantic film, love movie||NUNCLASSIFIED|n
-恋愛|恋愛遍歴|れんあいへんれき|history of one's love affairs||NUNCLASSIFIED|n
-恋愛|社内恋愛|しゃないれんあい|office romance, office love affair||NUNCLASSIFIED|n
-恋愛|分散恋愛|ぶんさんれんあい|(gen. of a woman) loving two or more partners without favour||NUNCLASSIFIED|n
-恋愛|エア恋愛|エアれんあい|pretend romance, fantasy relationship||NUNCLASSIFIED|n vs
-恋愛|恋愛体質|れんあいたいしつ|predisposition for love||NUNCLASSIFIED|n
-恋愛|国際恋愛|こくさいれんあい|international romantic relationship||NUNCLASSIFIED|n
-恋愛|恋愛下手|れんあいべた|bad at romance, awkward in relationships||NUNCLASSIFIED|adj-na n
-恋愛|恋愛ゲーム|れんあいゲーム|romance-focused video game||NUNCLASSIFIED|n
-恋愛|大恋愛|だいれんあい|great love, passionate affair||NUNCLASSIFIED|n
-恋愛|恋愛ドラマ|れんあいドラマ|romantic TV series, romance TV show||NUNCLASSIFIED|n
-恋愛|恋愛観|れんあいかん|one's view on love, one's philosophy of love||NUNCLASSIFIED|n
-恋愛|恋愛関係|れんあいかんけい|love affair, love relationship||NUNCLASSIFIED|n
-恋愛|恋愛結婚|れんあいけっこん|love marriage||NUNCLASSIFIED|n
-恋愛|恋愛至上主義|れんあいしじょうしゅぎ|love for love's sake||NUNCLASSIFIED|n
-恋愛|恋愛遊戯|れんあいゆうぎ|trifling with love||NUNCLASSIFIED|n
-恋愛|恋愛感情|れんあいかんじょう|amorous feelings, feeling of being in love||NUNCLASSIFIED|n
-恋愛|恋愛もの|れんあいもの|love story, romance||NUNCLASSIFIED|n
-恋愛|恋愛対象|れんあいたいしょう|object of romantic interest||NUNCLASSIFIED|n
-恋愛|自由恋愛|じゆうれんあい|free love||NUNCLASSIFIED|n
-恋愛|恋愛活動|れんあいかつどう|looking for love, searching for a lover||NUNCLASSIFIED|n vs
-恋愛|疑似恋愛|ぎじれんあい|pseudo-romance, pseudo (mock) love affair||NUNCLASSIFIED|n
-恋愛|恋愛指南|れんあいしなん|instruction in the ways of love||NUNCLASSIFIED|n
-恋愛|恋愛禁止|れんあいきんし|love ban, relationship ban, talent agency rule forbidding its clients from getting involved in romantic relationships||NUNCLASSIFIED|n
-恋愛|恋愛問題|れんあいもんだい|love problems, problem related to love||NUNCLASSIFIED|n
-恋愛|恋愛運|れんあいうん|one's romantic fate, one's luck in love||NUNCLASSIFIED|n
-恋愛|恋愛小説|れんあいしょうせつ|love romance, love story, romance, romance story, romantic fiction||NUNCLASSIFIED|n
-恋愛|遠距離恋愛|えんきょりれんあい|long distance relationship||NUNCLASSIFIED|n
-もらえる|貰える|もらえる|to be able to receive, to be able to take, to be able to accept, , could you (give me), would you, can you||NA19|v1
-太め|太め|ふとめ|plump, somewhat large||NA7|adj-no adj-na n
-言える|言える|いえる|to be possible to say, to be able to say||NUNCLASSIFIED|v1 exp
-言える|今だから言える|いまだからいえる|I can say now (what I couldn't before), now (that things have changed) I don't mind telling you, I couldn't tell you until now, I couldn't have told you this back then||NA3|exp
-残り物|残り物には福がある|のこりものにはふくがある|there is unexpected good in what others have left behind, last but not least, there is fortune in leftovers||NUNCLASSIFIED|exp v5r-i
-残り物|残り物に福あり|のこりものにふくあり|there is unexpected good in what others have left behind, last but not least, there is fortune in leftovers||NUNCLASSIFIED|exp
-残り物|残り物に福がある|のこりものにふくがある|there is unexpected good in what others have left behind, last but not least, there is fortune in leftovers||NUNCLASSIFIED|exp v5r-i
-残り物|残り物|のこりもの|leftovers (esp. food), remnants||NUNCLASSIFIED|n
-特売|特売|とくばい|special sale|N2|N2|n vs vt
-特売|特売場|とくばいじょう|bargain floor or basement||NUNCLASSIFIED|n
-特売|特売品|とくばいひん|bargain goods||NUNCLASSIFIED|n
-思い切る|思い切る|おもいきる|to give up all thoughts of, to abandon, to despair of, to make up one's mind, to take a momentous decision||NA4|v5r vt vi
-からから|からから|からから|parched, dried-up, bone-dry, empty, hollow, rattling, clattering, laughing loudly, roaring with laughter||NA7|adj-na adj-no adv adv-to
-送金|送金|そうきん|remittance, sending money, transferring money|N2|N2|n vs vt vi
-送金|送金為替|そうきんかわせ|remittance bill||NUNCLASSIFIED|n
-送金|送金受取人|そうきんうけとりにん|remittee||NUNCLASSIFIED|n
-送金|国際送金|こくさいそうきん|international money transfer, overseas remittance||NUNCLASSIFIED|n
-送金|海外送金|かいがいそうきん|overseas remittance||NUNCLASSIFIED|n vs
-送金|送金先|そうきんさき|remittee||NUNCLASSIFIED|n
-送金|送金小切手|そうきんこぎって|cashier's cheque, cashier's check, demand draft, remittance check||NUNCLASSIFIED|n
-送金|電信送金|でんしんそうきん|wire transfer||NUNCLASSIFIED|n
-送金|送金額|そうきんがく|amount of remittance||NUNCLASSIFIED|n
-ぶらぶら|ぶらぶら|ぶらぶら|dangling heavily, swaying to and fro, swinging, strolling, rambling, roaming, wandering, idly, lazily, leisurely, aimlessly, persisting (of an illness)|N1|N1|adv adv-to vs adj-na
-儲かる|風が吹けば桶屋が儲かる|かぜがふけばおけやがもうかる|any event can bring about an effect in an unexpected way, if the wind blows the bucket makers prosper||NA10|exp v5r
-儲かる|儲かる|もうかる|to be profitable, to yield a profit|N3|N3|v5r vi
-発生|発生学|はっせいがく|embryology||NUNCLASSIFIED|n
-発生|発生|はっせい|outbreak, spring forth, occurrence, incidence, generation (e.g. of power or heat), genesis, origin, ontogeny, development of complex multicellular structures from cell(s) in a simple state|N1|N1|n vs vi vt
-発生|オーディオ信号発生器|オーディオしんごうはっせいき|tone generator, audio signal generator, AF signal generator||NUNCLASSIFIED|n
-発生|発生段階|はっせいだんかい|developmental stage||NUNCLASSIFIED|n
-発生|宇宙発生論|うちゅうはっせいろん|cosmogony||NUNCLASSIFIED|n
-発生|連続発生|れんぞくはっせい|consecutive occurrences||NUNCLASSIFIED|n
-発生|文字発生器|もじはっせいき|character generator||NUNCLASSIFIED|n
-発生|自然発生説|しぜんはっせいせつ|theory of spontaneous generation||NUNCLASSIFIED|n
-発生|個体発生論|こたいはっせいろん|ontogeny||NUNCLASSIFIED|n
-発生|胚発生|はいはっせい|embryogenesis, embryogeny, embryonic development||NUNCLASSIFIED|n
-発生|超音波発生装置|ちょうおんぱはっせいそうち|ultrasonic generator, sonicator||NUNCLASSIFIED|n
-発生|自然発生|しぜんはっせい|spontaneous generation, abiogenesis||NUNCLASSIFIED|n adj-no
-発生|系統発生|けいとうはっせい|phylogeny, phylogenesis||NUNCLASSIFIED|n adj-no
-発生|発生生物学|はっせいせいぶつがく|developmental biology||NUNCLASSIFIED|n
-発生|大発生|だいはっせい|explosive increase (in number of pests), (severe) outbreak or upsurge of pests||NUNCLASSIFIED|n
-発生|ストローク文字発生器|ストロークもじはっせいき|stroke character generator||NUNCLASSIFIED|n
-発生|ダイオード関数発生器|ダイオードかんすうはっせいき|Diode Function Generator, DFG||NUNCLASSIFIED|n
-発生|卵片発生|らんぺんはっせい|merogony||NUNCLASSIFIED|n
-発生|トークン発生レート|トークンはっせいレート|token issue rate||NUNCLASSIFIED|n
-発生|乱数発生器|らんすうはっせいき|random number generator||NUNCLASSIFIED|n
-発生|多原発生|たげんはっせい|polygenesis, polyphylesis||NUNCLASSIFIED|n
-発生|ベクトル発生器|ベクトルはっせいき|vector generator||NUNCLASSIFIED|n
-発生|関数発生器|かんすうはっせいき|function generator||NUNCLASSIFIED|n
-発生|メッセージ発生源認証|メッセージはっせいげんにんしょう|message origin authentication||NUNCLASSIFIED|n
-発生|曲線発生器|きょくせんはっせいき|curve generator||NUNCLASSIFIED|n
-発生|信号発生器|しんごうはっせいき|signal generator||NUNCLASSIFIED|n
-発生|雌性発生|しせいはっせい|gynogenesis||NUNCLASSIFIED|n
-発生|発生学者|はっせいがくしゃ|embryologist||NUNCLASSIFIED|n
-発生|火災発生|かさいはっせい|outbreak of a fire||NUNCLASSIFIED|n
-発生|線分文字発生器|せんぶんもじはっせいき|stroke character generator||NUNCLASSIFIED|n
-発生|発生順|はっせいじゅん|chronological||NUNCLASSIFIED|n adj-no
-発生|熱発生|ねつはっせい|calorification, thermogenesis||NUNCLASSIFIED|n
-発生|放射線発生装置|ほうしゃせんはっせいそうち|radiation generator||NUNCLASSIFIED|n
-発生|日本発生生物学会|にっぽんはっせいせいぶつがっかい|Japanese Society of Developmental Biologists, JSDB||NUNCLASSIFIED|n
-発生|異常発生|いじょうはっせい|plague||NUNCLASSIFIED|n adj-no
-発生|打診発生源認証|だしんはっせいげんにんしょう|probe origin authentication||NUNCLASSIFIED|n
-発生|発生率|はっせいりつ|frequency, rate of occurrence||NUNCLASSIFIED|n
-発生|犯罪発生率|はんざいはっせいりつ|crime rate||NUNCLASSIFIED|n
-発生|比較発生学|ひかくはっせいがく|comparative embryology||NUNCLASSIFIED|n
-発生|実験発生学|じっけんはっせいがく|experimental embryology||NUNCLASSIFIED|n
-発生|進化発生学|しんかはっせいがく|evolutionary developmental biology, evo-devo||NUNCLASSIFIED|n
-発生|可変関数発生器|かへんかんすうはっせいき|variable function generator||NUNCLASSIFIED|n
-発生|固定関数発生器|こていかんすうはっせいき|fixed function generator||NUNCLASSIFIED|n
-発生|発生源|はっせいげん|source, origin||NUNCLASSIFIED|n
-発生|発生頻度|はっせいひんど|frequency of occurrence||NUNCLASSIFIED|n
-発生|発生源の否認不能|はっせいげんのひにんふのう|non-repudiation of origin||NUNCLASSIFIED|n
-発生|細胞発生|さいぼうはっせい|cytogenesis||NUNCLASSIFIED|n adj-no
-発生|個体発生|こたいはっせい|ontogeny, ontogenesis||NUNCLASSIFIED|n
-発生|集団発生|しゅうだんはっせい|mass outbreak (of a disease)||NUNCLASSIFIED|n
-だるい|饑い|ひだるい|hungry||NUNCLASSIFIED|adj-i
-だるい|腕弛い|かいだるい|tired, weary||NUNCLASSIFIED|adj-i
-だるい|間怠い|まだるい|(frustratingly) slow, tedious, sluggish, dull, roundabout||NUNCLASSIFIED|adj-i
-だるい|気だるい|けだるい|languid, listless||NUNCLASSIFIED|adj-i
-だるい|甘たるい|あまたるい|sentimental, mushy, saccharine||NUNCLASSIFIED|adj-i
-だるい|怠い|だるい|sluggish, languid, listless, heavy (heart, legs, etc.), dull, bothersome, tiresome|N1|N1|adj-i
-取り消す|取り消す|とりけす|to cancel, to withdraw, to retract, to take back (words, etc.), to revoke|N2|N2|v5s vt
-気軽|気軽い|きがるい|cheerful, buoyant, lighthearted||NUNCLASSIFIED|adj-i
-気軽|気軽|きがる|carefree, buoyant, lighthearted, sprightly, ease, casual|N2|N2|adj-na n
-気軽|気軽に|きがるに|freely, readily, cheerfully, without any sense of hesitation, without reserve, without treating it as a big deal, casually|N1|N1|adv
-下書き|下書き|したがき|rough copy, draft, draught|N2|N2|n vs
-下書き|版下書き|はんしたかき|block copy artist||NUNCLASSIFIED|n
-騒々しい|騒々しい|そうぞうしい|noisy, boisterous|N2|N2|adj-i
-優先|優先順位|ゆうせんじゅんい|priority, order of precedence||NUNCLASSIFIED|n
-優先|優先|ゆうせん|preference, priority, precedence|N1|N1|n vs vt vi adj-no
-優先|優先取組物質|ゆうせんとりくみぶっしつ|substances requiring priority action (with regard to environmental issues), priority substance||NUNCLASSIFIED|n
-優先|優先席|ゆうせんせき|priority seat, courtesy seat, seat provided in trains, buses, etc. for the use of the disabled, young children, the elderly, pregnant women, etc.||NA2|n
-優先|高優先|こうゆうせん|high priority||NUNCLASSIFIED|n
-優先|優先事項|ゆうせんじこう|priority matter||NUNCLASSIFIED|n
-優先|乗降車優先|じょうこうしゃゆうせん|priority to pedestrians||NUNCLASSIFIED|n
-優先|深さ優先探索|ふかさゆうせんたんさく|depth-first search||NUNCLASSIFIED|n
-優先|最優先|さいゆうせん|maximum preference, maximum priority, priority handling||NUNCLASSIFIED|n vs vt
-優先|優先語|ゆうせんご|preferred term||NUNCLASSIFIED|n
-優先|優先株主|ゆうせんかぶぬし|holder of preferred stock||NUNCLASSIFIED|n
-優先|セグメント優先度|セグメントゆうせんど|segment priority||NUNCLASSIFIED|n
-優先|ビュー変換入力優先度|ビューへんかんにゅうりょくゆうせんど|view transformation input priority||NUNCLASSIFIED|n
-優先|優先道路|ゆうせんどうろ|priority road, road on which vehicles have priority at all intersections||NUNCLASSIFIED|n
-優先|経時優先|けいじゆうせん|elapsed aging||NUNCLASSIFIED|n
-優先|優先使用語|ゆうせんしようご|preferred term||NUNCLASSIFIED|n
-優先|優先度|ゆうせんど|degree of relative priority||NUNCLASSIFIED|n
-優先|実行優先順位|じっこうゆうせんじゅんい|dispatching priority||NUNCLASSIFIED|n
-優先|自動優先順位グループ|じどうゆうせんじゅんいグループ|APG, Automatic Priority Group||NUNCLASSIFIED|n
-優先|非優先語|ひゆうせんご|non-preferred term||NUNCLASSIFIED|n
-優先|行優先|ぎょうゆうせん|row-major (e.g. vector)||NUNCLASSIFIED|adj-no
-優先|列優先|れつゆうせん|column-major (e.g. vector)||NUNCLASSIFIED|adj-no
-優先|公益優先|こうえきゆうせん|public interest first||NUNCLASSIFIED|n
-優先|配信優先度選択|はいしんゆうせんどせんたく|grade of delivery selection||NUNCLASSIFIED|n
-優先|歩行者優先|ほこうしゃゆうせん|priority to pedestrians||NUNCLASSIFIED|n
-優先|優先扱い|ゆうせんあつかい|priority treatment, preferential treatment||NUNCLASSIFIED|n
-優先|優先外貨|ゆうせんがいか|preferred foreign currency||NUNCLASSIFIED|n
-優先|優先株|ゆうせんかぶ|preferred stock, preference shares||NUNCLASSIFIED|n
-優先|優先権|ゆうせんけん|priority, preference, preferential right, right of way||NUNCLASSIFIED|n
-優先|優先的|ゆうせんてき|preferential||NUNCLASSIFIED|adj-na
-優先|上限実行優先順位|じょうげんじっこうゆうせんじゅんい|limit dispatching priority||NUNCLASSIFIED|n
-優先|低い優先順位|ひくいゆうせんじゅんい|low priority (e.g. cell)||NUNCLASSIFIED|n
-優先|優先リンクセット|ゆうせんリンクセット|priority link set||NUNCLASSIFIED|n
-優先|最優先事項|さいゆうせんじこう|matter of the highest priority, top priority, first priority||NUNCLASSIFIED|n
-優先|表示優先度|ひょうじゆうせんど|display priority||NUNCLASSIFIED|n
-優先|幅優先探索|はばゆうせんたんさく|breadth-first search||NUNCLASSIFIED|n
-優先|家庭優先|かていゆうせん|giving one's family life priority over one's work||NUNCLASSIFIED|n
-優先|優先座席|ゆうせんざせき|priority seating||NUNCLASSIFIED|n
-時間割|時間割|じかんわり|timetable (esp. a weekly school timetable), schedule|N2|N2|n
-自習|自習室|じしゅうしつ|(private) study room||NUNCLASSIFIED|n
-自習|自習書|じしゅうしょ|self-study book, self-study manual, crib||NUNCLASSIFIED|n
-自習|自学自習|じがくじしゅう|teaching oneself, learning by oneself, self-study||NUNCLASSIFIED|n vs vt
-自習|自習時間|じしゅうじかん|study time||NUNCLASSIFIED|n
-自習|自習|じしゅう|self-study, teaching oneself|N2|N2|n vs vt vi
-自習|朝自習|あさじしゅう|studying in the morning (by oneself), brief 'self-study' period before morning classes begin||NUNCLASSIFIED|n vs
-きっかけ|切っ掛け|きっかけ|chance, start, cue, excuse, motive, impetus, occasion|N3|N3|n
-聞き取れる||||||
-入館|入館|にゅうかん|entry (into a library, museum, etc.), entering||NUNCLASSIFIED|n vs
-入館|入館証|にゅうかんしょう|entry pass (to a building), admission card, visitor's pass||NUNCLASSIFIED|n
-入館|入館者|にゅうかんしゃ|visitor (to a museum, library, etc.)||NUNCLASSIFIED|n
-入館|入館料|にゅうかんりょう|Admission fee, Entrance fee||NA5|n
-冬日|冬日|ふゆび|winter sun, winter sunshine||NUNCLASSIFIED|n
-冬日|真冬日|まふゆび|day on which the temperature stays below 0°C, cold winter's day||NUNCLASSIFIED|n
-早速|早速|さっそく|at once, immediately, without delay, promptly|N2|N2|adv
-早速|早速ですが|さっそくですが|jumping straight to the business, ..., I know this is abrupt, but ..., let's skip the pleasantries, getting to the point||NA11|exp
-勤務|勤務|きんむ|service, duty, work|N1|N1|n vs vi
-勤務|日中勤務|にっちゅうきんむ|daytime work, day shift||NUNCLASSIFIED|n
-勤務|勤務実績|きんむじっせき|service record||NUNCLASSIFIED|n
-勤務|勤務者|きんむしゃ|workers, employees, people on duty||NUNCLASSIFIED|n
-勤務|勤務中|きんむちゅう|on duty, at work, while working||NUNCLASSIFIED|n adv
-勤務|勤務時間|きんむじかん|office hours, business hours, working hours||NA8|n
-勤務|勤務医|きんむい|doctor working in a hospital, physician working in public practice||NUNCLASSIFIED|n
-勤務|在宅勤務|ざいたくきんむ|working at home, telecommuting||NA10|n
-勤務|超過勤務手当|ちょうかきんむてあて|overtime pay||NUNCLASSIFIED|n
-勤務|勤務成績|きんむせいせき|(one's) work performance, performance record, service record||NUNCLASSIFIED|n vs
-勤務|勤務地|きんむち|duty station, place of business, work location||NUNCLASSIFIED|n
-勤務|時間外勤務|じかんがいきんむ|overtime (work), work done outside normal working hours||NUNCLASSIFIED|n vs
-勤務|勤務場所|きんむばしょ|workplace, place of work||NUNCLASSIFIED|n
-勤務|半在宅勤務|はんざいたくきんむ|hybrid working environment, mix of workplace and remote work||NUNCLASSIFIED|n
-勤務|勤務員|きんむいん|worker, employee||NUNCLASSIFIED|n
-勤務|勤務交代|きんむこうたい|change of shifts||NUNCLASSIFIED|n
-勤務|勤務地手当|きんむちてあて|area allowance, regional cost of living allowance||NUNCLASSIFIED|n
-勤務|勤務先|きんむさき|place of employment||NUNCLASSIFIED|n
-勤務|勤務年限|きんむねんげん|term of service||NUNCLASSIFIED|n
-勤務|勤務評定|きんむひょうてい|(work) performance evaluation, performance review, efficiency rating||NUNCLASSIFIED|n
-勤務|前哨勤務|ぜんしょうきんむ|outpost duty||NUNCLASSIFIED|n
-勤務|夜間勤務|やかんきんむ|night work||NUNCLASSIFIED|n adj-no
-勤務|超過勤務|ちょうかきんむ|overtime (work)||NUNCLASSIFIED|n adj-no
-勤務|交代勤務|こうたいきんむ|shift work||NUNCLASSIFIED|n
-勤務|当直勤務|とうちょくきんむ|shift duty, point duty||NUNCLASSIFIED|n
-仕上げる|仕上げる|しあげる|to finish up, to complete, to finish off, to get through, to polish off|N2|N2|v1 vt
-更新|更新料|こうしんりょう|renewal charge, renewal fee||NUNCLASSIFIED|n
-更新|更新世|こうしんせい|Pleistocene epoch||NUNCLASSIFIED|n
-更新|遅延更新|ちえんこうしん|deferred update||NUNCLASSIFIED|n
-更新|毎日更新|まいにちこうしん|daily update, updating daily||NUNCLASSIFIED|exp n vs
-更新|森林更新|しんりんこうしん|logging and regenerating forests (often with more commercial species)||NUNCLASSIFIED|n
-更新|記録更新|きろくこうしん|breaking a record, setting a new record||NUNCLASSIFIED|n vs
-更新|萌芽更新|ほうがこうしん|coppicing, coppice regeneration||NUNCLASSIFIED|n
-更新|更新暦|こうしんれき|change log, record of updates, update history, what's new||NUNCLASSIFIED|n
-更新|更新日|こうしんび|update date, renewal date, day on which something was last updated (web page, listing etc.)||NUNCLASSIFIED|n
-更新|表示更新モード|ひょうじこうしんモード|display update state||NUNCLASSIFIED|n
-更新|更新履歴|こうしんりれき|change log, record of updates, update history||NUNCLASSIFIED|n
-更新|ファイルの更新|ファイルのこうしん|file updating||NUNCLASSIFIED|n
-更新|在留期間更新許可|ざいりゅうきかんこうしんきょか|extension of visa permit||NUNCLASSIFIED|n
-更新|最終更新|さいしゅうこうしん|last update, last updated||NUNCLASSIFIED|exp
-更新|記録を更新する|きろくをこうしんする|to break a record, to establish a new record||NUNCLASSIFIED|exp vs-i
-更新|自動更新|じどうこうしん|automatic update, automatic renewal||NUNCLASSIFIED|n
-更新|更新|こうしん|renewal, update, innovation, improvement|N1|N1|n vs vt vi
-調味料|みりん風調味料|みりんふうちょうみりょう|mirin-style condiment, mirin-like seasoning, low-alcohol mirin||NUNCLASSIFIED|n
-調味料|うま味調味料|うまみちょうみりょう|flavour enhancer (e.g. monosodium glutamate), flavor enhancer||NUNCLASSIFIED|n
-調味料|調味料|ちょうみりょう|flavoring (e.g. salt, sugar, soy sauce, vinegar, etc.), seasoning|N2|N2|n
-調味料|化学調味料|かがくちょうみりょう|chemical seasoning (esp. monosodium glutamate)||NUNCLASSIFIED|n
-調味料|醸造調味料|じょうぞうちょうみりょう|fermented seasoning (e.g. mirin, cooking sake, miso)||NUNCLASSIFIED|n
-蛇口|蛇口|じゃぐち|faucet, tap|N2|N2|n
-吃逆|しゃっくり|しゃっくり|hiccough, hiccup|N3|N3|n vs vi
-吐き気|吐き気|はきけ|nausea, sickness in the stomach|N2|N2|n
-吐き気|吐き気を催す|はきけをもよおす|to feel nauseated, to feel sick||NUNCLASSIFIED|exp v5s
-吐き気|吐き気がする|はきけがする|to feel nauseous||NA11|exp vs-i
-余る|冥加に余る|みょうがにあまる|to receive too many blessings, to be excessively favoured, to be too good for||NUNCLASSIFIED|exp v5r
-余る|余る|あまる|to remain, to be left over, to be in excess, to be too many|N2|N2|v5r vi
-余る|身に余る光栄|みにあまるこうえい|undeserved honor (honour), too great an honour||NA3|exp
-余る|身に余る|みにあまる|to be undeserved, to be more than one deserves, to be more than one can handle|N1|N1|exp v5r
-余る|十指に余る|じっしにあまる|to number more than ten, to be numerous||NUNCLASSIFIED|exp v5r
-余る|手に余る|てにあまる|to be beyond one's capacities, to be beyond one's powers, to be beyond one's control, to be unmanageable||NA13|exp v5r
-余る|目に余る|めにあまる|to be intolerable, to be unpardonable||NUNCLASSIFIED|exp v5r
-余る|思い余る|おもいあまる|to not know how to act or what to do, to be at a loss||NA1|v5r vi
-余る|思案に余る|しあんにあまる|to be at wit's end, to be at a loss for what to do||NUNCLASSIFIED|exp v5r
-余る|人目に余る|ひとめにあまる|to be too prominent||NUNCLASSIFIED|exp v5r
-余る|有り余る|ありあまる|to be superfluous, to be in excess, to be more than enough||NA12|v5r vi
-余る|勢い余る|いきおいあまる|to have excess momentum (from going too fast, using too much force, etc.), to get carried away, to go overboard, to overdo (something)||NA8|exp v5r
-会える||||||
-裸足|裸足で逃げる|はだしでにげる|to be put to shame (of an expert), to be no match (for someone), to run away barefoot||NUNCLASSIFIED|exp v1
-裸足|裸足で逃げ出す|はだしでにげだす|to be put to shame (of an expert), to be no match (for someone), to run away barefoot||NUNCLASSIFIED|exp v5s
-裸足|裸足|はだし|barefoot, superior to (a professional, etc. in ability or achievement)|N2|N2|n adj-no n-suf
-裸足|玄人はだし|くろうとはだし|outdoing a professional, putting an expert to shame||NUNCLASSIFIED|n adj-no
-裸足|素裸足|すはだし|barefoot||NUNCLASSIFIED|n adj-no
-あわただしい|慌ただしい|あわただしい|busy, hurried, confused, flurried|N2|N2|adj-i
-工事|配線工事|はいせんこうじ|wiring work, wiring||NUNCLASSIFIED|n
-工事|配管工事|はいかんこうじ|pipe laying, plumbing||NUNCLASSIFIED|n
-工事|護岸工事|ごがんこうじ|levee protection works||NUNCLASSIFIED|n
-工事|工事を進める|こうじをすすめる|to advance construction, to proceed with construction||NUNCLASSIFIED|exp v1
-工事|改修工事|かいしゅうこうじ|repair work||NUNCLASSIFIED|n
-工事|水道工事|すいどうこうじ|waterworks||NUNCLASSIFIED|n
-工事|改良工事|かいりょうこうじ|improvement work (construction), betterment||NUNCLASSIFIED|n
-工事|鉄道工事|てつどうこうじ|railroad construction work||NUNCLASSIFIED|n
-工事|工事費|こうじひ|construction costs, installation cost||NUNCLASSIFIED|n
-工事|公共工事|こうきょうこうじ|public works||NUNCLASSIFIED|n
-工事|治水工事|ちすいこうじ|riparian works, flood-control works||NUNCLASSIFIED|n
-工事|土木工事|どぼくこうじ|public works||NUNCLASSIFIED|n
-工事|工事車両|こうじしゃりょう|construction vehicle (bulldozer, backhoe, loader, etc.)||NUNCLASSIFIED|n
-工事|電気工事|でんきこうじ|electrical work||NUNCLASSIFIED|n
-工事|総合工事業者|そうごうこうじぎょうしゃ|general contractor, main contractor||NUNCLASSIFIED|n
-工事|解体工事|かいたいこうじ|demolition work, dismantling work||NUNCLASSIFIED|n
-工事|職別工事|しきべつこうじ|specialist subcontract work (in construction)||NUNCLASSIFIED|n
-工事|取り付け工事|とりつけこうじ|installation||NUNCLASSIFIED|n
-工事|リフォーム工事|リフォームこうじ|renovation work, remodeling, remodelling||NUNCLASSIFIED|n
-工事|公共工事契約指導室|こうきょうこうじけいやくしどうしつ|Public Works Contracts Office||NUNCLASSIFIED|n
-工事|那覇港湾空港工事事務所|なはこうわんくうこうこうじじむしょ|Naha Harbour and Airport Construction Office||NUNCLASSIFIED|n
-工事|基礎工事|きそこうじ|foundation works||NUNCLASSIFIED|n
-工事|工事|こうじ|construction work, construction, work (related to construction, e.g. painting, concrete-pouring, etc.)|N3|N3|n vs vt vi
-工事|工事現場|こうじげんば|construction site||NUNCLASSIFIED|n
-工事|再工事|さいこうじ|reconstruction||NUNCLASSIFIED|n
-工事|鉄骨工事|てっこつこうじ|steel-frame construction work||NUNCLASSIFIED|n
-工事|道路工事|どうろこうじ|road construction, roadworks, road repairs||NUNCLASSIFIED|n
-工事|請負工事|うけおいこうじ|contract work||NUNCLASSIFIED|n
-工事|利水工事|りすいこうじ|irrigation works||NUNCLASSIFIED|n
-工事|河川工事|かせんこうじ|riparian works||NUNCLASSIFIED|n
-工事|工事中|こうじちゅう|under construction||NUNCLASSIFIED|adj-no
-工事|建設工事|けんせつこうじ|construction work||NUNCLASSIFIED|n
-工事|宅地造成工事規制区域|たくちぞうせいこうじきせいくいき|housing land development construction regulated area, zoning area where residential land development is restricted in order to prevent land- and mudslides and requires approval from the prefectural governor||NUNCLASSIFIED|n
-工事|突貫工事|とっかんこうじ|construction at top speed||NUNCLASSIFIED|n
-工事|建設工事保険|けんせつこうじほけん|builder's risk insurance, construction insurance||NUNCLASSIFIED|n
-工事|がいし引き工事|がいしびきこうじ|knob-and-tube wiring, insulator wiring, electrical wiring strung on surface-mounted insulators||NUNCLASSIFIED|n
-工事|設備工事|せつびこうじ|equipment installation, installation work||NUNCLASSIFIED|n
-工事|下水工事|げすいこうじ|drainage (sewerage) works||NUNCLASSIFIED|n
-工事|電気工事士|でんきこうじし|licensed electrician||NUNCLASSIFIED|n
-電源|電源開発|でんげんかいはつ|Electric Power Development||NUNCLASSIFIED|n
-電源|電源ランプ|でんげんランプ|power light||NUNCLASSIFIED|n
-電源|電源装置|でんげんそうち|power supply (device)||NUNCLASSIFIED|n
-電源|交流電源|こうりゅうでんげん|alternator, AC generator||NUNCLASSIFIED|n
-電源|電源ケーブル|でんげんケーブル|power cable, power lead||NUNCLASSIFIED|n
-電源|電源が入る|でんげんがはいる|to be powered on, to be turned on||NUNCLASSIFIED|exp v5r
-電源|スイッチング電源|スイッチングでんげん|switched-mode power supply, switching regulator||NUNCLASSIFIED|n
-電源|電源喪失|でんげんそうしつ|loss of power, power outage, blackout||NUNCLASSIFIED|n
-電源|バックアップ電源|バックアップでんげん|backup power supply||NUNCLASSIFIED|n
-電源|電源タップ|でんげんタップ|power strip, power bar||NUNCLASSIFIED|n
-電源|無停電電源|むていでんでんげん|uninterruptible power supply, UPS||NUNCLASSIFIED|n
-電源|外部電源|がいぶでんげん|external power source, external power supply||NUNCLASSIFIED|n
-電源|商用電源式計算器|しょうようでんげんしきけいさんき|mains-powered calculator||NUNCLASSIFIED|n
-電源|冗長電源|じょうちょうでんげん|redundant power supply||NUNCLASSIFIED|n
-電源|定電圧定周波数電源装置|ていでんあつていしゅうはすうでんげんそうち|CVCF, Constant Voltage Frequency Power Supply||NUNCLASSIFIED|n
-電源|電源コード|でんげんコード|power cord||NUNCLASSIFIED|n
-電源|電源スイッチ|でんげんスイッチ|power switch||NUNCLASSIFIED|n
-電源|電源回路|でんげんかいろ|power supply||NUNCLASSIFIED|n
-電源|電源管理|でんげんかんり|power management||NUNCLASSIFIED|n
-電源|電源投入|でんげんとうにゅう|power-up||NUNCLASSIFIED|n
-電源|電源アダプター|でんげんアダプター|power adapter||NUNCLASSIFIED|n
-電源|無停電電源装置|むていでんでんげんそうち|Uninterruptible Power Supply, UPS||NUNCLASSIFIED|n
-電源|電源を切る|でんげんをきる|to turn off power||NUNCLASSIFIED|exp v5r
-電源|電源を入れる|でんげんをいれる|to turn on power||NA1|exp v1
-電源|電源開発|でんげんかいはつ|development of electrical power resources||NUNCLASSIFIED|n
-電源|電源ユニット|でんげんユニット|power supply unit, PSU, power module||NUNCLASSIFIED|n
-電源|電源切断状態|でんげんせつだんじょうたい|power disconnected (state)||NUNCLASSIFIED|n
-電源|電源投入シーケンス|でんげんとうにゅうシーケンス|power-on sequence||NUNCLASSIFIED|n
-電源|電源投入時パスワード|でんげんとうにゅうじパスワード|power-on password||NUNCLASSIFIED|n
-電源|非常用電源|ひじょうようでんげん|emergency power supply, backup power, emergency power source||NUNCLASSIFIED|n
-電源|負荷分散電源供給|ふかぶんさんでんげんきょうきゅう|load sharing power supply||NUNCLASSIFIED|n
-電源|電源車|でんげんしゃ|vehicle-mounted electricity generator (e.g. for filming, emergencies, etc.)||NUNCLASSIFIED|n
-電源|電源異常|でんげんいじょう|power failure||NUNCLASSIFIED|n
-電源|電源|でんげん|source of electricity, electrical power, power (button on TV, etc.)|N1|N1|n
-電源|電源コンセント|でんげんコンセント|electrical outlet, wall socket, electrical power||NUNCLASSIFIED|n
-電源|電源供給|でんげんきょうきゅう|power supply||NUNCLASSIFIED|n
-足し算|足し算|たしざん|addition|N2|N2|n
-以降|以降|いこう|on and after, as from, hereafter, thereafter, since|N2|N2|n adv
-日帰り|日帰り|ひがえり|day trip|N2|N2|n vs vi
-日帰り|日帰り手術|ひがえりしゅじゅつ|day surgery, day procedure||NUNCLASSIFIED|n
-日帰り|日帰り温泉|ひがえりおんせん|hot spring resort where customers can bathe without spending the night||NUNCLASSIFIED|n
-日帰り|日帰り客|ひがえりきゃく|day visitor, day tripper, non-staying customer||NUNCLASSIFIED|n
-日帰り|日帰り旅行|ひがえりりょこう|day trip||NUNCLASSIFIED|n
-薄暗い|薄暗い|うすぐらい|dim, gloomy|N2|N2|adj-i
-抱っこ|お姫様抱っこ|おひめさまだっこ|carrying a person in one's arms, princess carry, bridal carry||NA9|n vs vt
-抱っこ|だっこ紐|だっこひも|(front) baby sling, (front) baby carrier||NA9|n
-抱っこ|抱っこ|だっこ|hug, carrying in one's arms (a baby, pet, doll, etc.)||NA9|n vs vt int
-抱っこ|おんぶに抱っこ|おんぶにだっこ|relying completely on others, being totally dependent on others||NUNCLASSIFIED|exp n
-抱っこ|抱っこマン|だっこマン|baby who wants to be carried||NUNCLASSIFIED|n
-受験生|受験生|じゅけんせい|student preparing for or taking examinations (usu. entrance exams), test-taker|N1|N1|n
-見合い|見合い結婚|みあいけっこん|arranged marriage||NA9|n
-見合い|お見合いデート|おみあいデート|blind date||NUNCLASSIFIED|n
-見合い|見合い|みあい|formal marriage interview, marriage meeting, face-off, exchange of looks|N2|N2|n vs vi
-見合い|お見合い|おみあい|formal marriage interview||NA9|n vs vi
-さっぱりする||||||
-給食|学校給食|がっこうきゅうしょく|school lunch||NUNCLASSIFIED|n
-給食|給食|きゅうしょく|provision of lunch (e.g. at office, school, etc.), providing a meal, lunch service|N1|N1|n vs vi
-給食|給食費|きゅうしょくひ|charge for a meal (usu. at school), school lunch fee||NUNCLASSIFIED|n
-給食|給食室|きゅうしょくしつ|Japanese (school) lunchroom, Japanese (school) cafeteria||NUNCLASSIFIED|n
-給食|給食当番|きゅうしょくとうばん|being responsible for school lunch distribution and clean-up||NUNCLASSIFIED|n
-給食|補給食|ほきゅうしょく|dietary supplement (for sports), energy supplement, nutritional supplement||NUNCLASSIFIED|n
-給食|自校給食|じこうきゅうしょく|on-site provision of school meals||NUNCLASSIFIED|n
-給食|給食係|きゅうしょくがかり|lunch monitor, student responsible for school lunch distribution and clean-up||NUNCLASSIFIED|n
+word|reading|jlpt_level|jlpt_level_raw|tags
+始発|しはつ|N1|N1|n
+出来上がる|できあがる|N2|N2|v5r vi
+コンクール|コンクール|N3|N3|n
+凝る|こごる|N2|N2|v5r vi
+凝る|しこる||NUNCLASSIFIED|v5r vi
+凝る|こる||NA5|v5r vi
+ひっくり返す|ひっくりかえす|N3|N3|v5s vt
+ストレス|ストレス|N5|N5|n
+心的外傷後ストレス障害|しんてきがいしょうごすとれるしょうがい||NA16|n
+本気で|ほんきで||NA1|adv
+本気|ほんき|N2|N2|n adj-no adj-na
+一本気|いっぽんぎ||NA2|adj-na n
+本気にする|ほんきにする||NA1|exp vs-i
+本気を出す|ほんきをだす||NA3|exp v5s
+退かす|どかす||NA9|v5s vt
+申し込み|もうしこみ|N4|N4|n
+正社員|せいしゃいん||NA10|n
+追い越す|おいこす|N2|N2|v5s vt
+にわか雨|にわかあめ||NA14|n
+フライパン|フライパン|N3|N3|n
+不景気|ふけいき|N1|N1|n adj-na
+個性|こせい|N2|N2|n
+個性豊か|こせいゆたか||NA8|adj-na
+個性的|こせいてき||NA6|adj-na
+甘やかす|あまやかす|N2|N2|v5s vt
+名札|なふだ|N2|N2|n
+乗り越す|のりこす||NA20|v5s vt
+乗車券|じょうしゃけん|N5|N5|n
+乗車|じょうしゃ|N2|N2|n vs vi
+行列|ぎょうれつ|N2|N2|n vs
+仮装行列|かそうぎょうれつ||NA13|n
+恋愛|れんあい|N2|N2|n vs vi adj-no
+貰える|もらえる||NA19|v1
+太め|ふとめ||NA7|adj-no adj-na n
+言える|いえる||NUNCLASSIFIED|v1 exp
+今だから言える|いまだからいえる||NA3|exp
+残り物|のこりもの||NUNCLASSIFIED|n
+特売|とくばい|N2|N2|n vs vt
+思い切る|おもいきる||NA4|v5r vt vi
+からから|からから||NA7|adj-na adj-no adv adv-to
+送金|そうきん|N2|N2|n vs vt vi
+ぶらぶら|ぶらぶら|N1|N1|adv adv-to vs adj-na
+風が吹けば桶屋が儲かる|かぜがふけばおけやがもうかる||NA10|exp v5r
+儲かる|もうかる|N3|N3|v5r vi
+発生|はっせい|N1|N1|n vs vi vt
+怠い|だるい|N1|N1|adj-i
+取り消す|とりけす|N2|N2|v5s vt
+気軽|きがる|N2|N2|adj-na n
+気軽に|きがるに|N1|N1|adv
+下書き|したがき|N2|N2|n vs
+騒々しい|そうぞうしい|N2|N2|adj-i
+優先|ゆうせん|N1|N1|n vs vt vi adj-no
+優先席|ゆうせんせき||NA2|n
+時間割|じかんわり|N2|N2|n
+自習|じしゅう|N2|N2|n vs vt vi
+切っ掛け|きっかけ|N3|N3|n
+入館|にゅうかん||NUNCLASSIFIED|n vs
+入館料|にゅうかんりょう||NA5|n
+冬日|ふゆび||NUNCLASSIFIED|n
+早速|さっそく|N2|N2|adv
+早速ですが|さっそくですが||NA11|exp
+勤務|きんむ|N1|N1|n vs vi
+勤務時間|きんむじかん||NA8|n
+在宅勤務|ざいたくきんむ||NA10|n
+仕上げる|しあげる|N2|N2|v1 vt
+更新|こうしん|N1|N1|n vs vt vi
+調味料|ちょうみりょう|N2|N2|n
+蛇口|じゃぐち|N2|N2|n
+しゃっくり|しゃっくり|N3|N3|n vs vi
+吐き気|はきけ|N2|N2|n
+吐き気がする|はきけがする||NA11|exp vs-i
+余る|あまる|N2|N2|v5r vi
+身に余る光栄|みにあまるこうえい||NA3|exp
+身に余る|みにあまる|N1|N1|exp v5r
+手に余る|てにあまる||NA13|exp v5r
+思い余る|おもいあまる||NA1|v5r vi
+有り余る|ありあまる||NA12|v5r vi
+勢い余る|いきおいあまる||NA8|exp v5r
+裸足|はだし|N2|N2|n adj-no n-suf
+慌ただしい|あわただしい|N2|N2|adj-i
+工事|こうじ|N3|N3|n vs vt vi
+電源を入れる|でんげんをいれる||NA1|exp v1
+電源|でんげん|N1|N1|n
+足し算|たしざん|N2|N2|n
+以降|いこう|N2|N2|n adv
+日帰り|ひがえり|N2|N2|n vs vi
+薄暗い|うすぐらい|N2|N2|adj-i
+お姫様抱っこ|おひめさまだっこ||NA9|n vs vt
+だっこ紐|だっこひも||NA9|n
+抱っこ|だっこ||NA9|n vs vt int
+受験生|じゅけんせい|N1|N1|n
+見合い結婚|みあいけっこん||NA9|n
+見合い|みあい|N2|N2|n vs vi
+お見合い|おみあい||NA9|n vs vi
+給食|きゅうしょく|N1|N1|n vs vi
+性格|せいかく|N5|N5|n
+廃棄|はいき|N1|N1|n vs vt
+非表示|ひひょうじ|N1|N1|adj-f n vs
+ばらつき|ばらつき||NA16|n
+駆け回る|かけまわる||NA18|v5r vi
+さくさく|サクサク||NA1|adv adv-to vs
+分かれる|わかれる|N4|N4|v1 vi
+片付ける|かたづける|N4|N4|v1 vt
+追い落とす|おいおとす||NA13|v5s
+バラバラ|バラバラ||NA1|adj-na adj-no adv vs
+ひそひそ話|ひそひそばなし||NA1|n
+論争|ろんそう|N3|N3|n vs vi
+公開|こうかい|N5|N5|n vs vt
+床の間|とこのま|N2|N2|n
+性質|せいしつ|N2|N2|n
+争い|あらそい|N2|N2|n
+分散|ぶんさん|N2|N2|n vs vt vi
+機嫌を損ねる|きげんをそこねる||NA13|exp v1
+格差|かくさ|N1|N1|n
+抗争|こうそう|N1|N1|n vs vi
+差異|さい|N1|N1|n
+出動|しゅつどう|N1|N1|n vs vi
+小声|こごえ|N1|N1|n adj-no
+陳列|ちんれつ|N1|N1|n vs vt
+配置|はいち|N1|N1|n vs vt
+飛散|ひさん|N1|N1|n vs vi
+私語|しご||NA1|n vs vi
+資質|ししつ||NA2|n
+出展|しゅってん||NA2|n vs vt
+傾ぐ|かしぐ||NA17|v5g vi
+天性|てんせい||NA2|n adv
+怒らせる|おこらせる||NA17|v1 vt
+気心|きごころ||NA4|n
+隊形|たいけい||NA4|n
+見せる|みせる|N5|N5|v1 vt aux-v
+調合|ちょうごう||NA4|n vs vt
+売却|ばいきゃく||NA4|n vs vt
+毛色|けいろ||NA4|n
+医局|いきょく||NA5|n
+広域|こういき||NA10|n
+ギャップ|ギャップ||NA7|n
+焼け焦げる|やけこげる||NA20|v1
+処分場|しょぶんじょう||NA10|n
+論|ろん||NA20|n n-suf
+ぶっ飛ばす|ぶっとばす||NA20|v5s vt
+譲る|ゆずる||NA1|v5r vt
+即売会|そくばいかい||NA11|n
+調剤|ちょうざい||NA12|n vs vt vi
+投げ捨てる|なげすてる||NA18|v1 vt
+伝令|でんれい||NA13|n
+表す|あらわす|N4|N4|v5s vt
+水盤|すいばん||NA14|n
+払拭|ふっしょく||NA14|n vs vt
+一家離散|いっかりさん||NA15|n vs
+置換|ちかん||NA15|n vs
+離散|りさん||NA15|n vs vi
+解く|とく|N3|N3|v5k vt
+巡る|めぐる|N3|N3|v5r vi
+悄気る|しょげる||NA17|v1 vi
+囁く|ささやく|N3|N3|v5k vi
+奪う|うばう|N3|N3|v5u vt
+傾く|かたむく|N3|N3|v5k vi
+不満|ふまん|N3|N3|n adj-na
+立派|りっぱ|N3|N3|adj-na
+不快感|ふかいかん||NA20|n
+冴える|さえる|N2|N2|v1 vi
+映る|うつる|N2|N2|v5r vi
+散る|ちる|N2|N2|v5r vi
+尖る|とがる|N3|N3|v5r vi
+披露|ひろう||NA5|n vs vt
+医院|いいん||NA2|n
+覆す|くつがえす|N1|N1|v5s vt
+意気|いき|N1|N1|n
+揉める|もめる|N2|N2|v1 vi
+体裁|ていさい|N2|N2|n
+疑わしい|うたがわしい|N1|N1|adj-i
+議論|ぎろん|N3|N3|n vs vt
+不可欠|ふかけつ|N2|N2|adj-na n
+発揮|はっき|N3|N3|n vs vt
+内緒話|||NE1|
+体質|たいしつ||NA2|n
+肌|はだ|N3|N3|n n-suf
+呈す|ていす||NA2|v5s vt
+割り箸|わりばし||NA3|n
+不均衡|||NE1|
+見栄|みえ|N1|N1|n
+心持ち|こころもち||NA3|n adv
+気象|きしょう|N3|N3|n
+処理|しょり|N3|N3|n vs vt
+鬼火|おにび||NA4|n
+訛る|なまる||NA4|v5r vi
+計らう|はからう||NA6|v5u vt
+破棄|はき|N1|N1|n vs vt
+配列|はいれつ|N1|N1|n vs vt
+紛争|ふんそう|N1|N1|n vs vi
+文句なし|もんくなし||NA4|adj-no
+出品|しゅっぴん|N1|N1|n vs vt vi
+訛り|なまり|N1|N1|n
+ばりばり|バリバリ||NA1|adv adv-to adj-na vs adj-no
+取り出し口|とりだしぐち||NA6|n
+振り回す|ふりまわす||NA6|v5s vt
+発散|はっさん||NA6|n vs
+護法|ごほう||NA15|n
+言い争う|いいあらそう||NA3|v5u vt
+解像度|かいぞうど||NA7|n
+折り合い|おりあい||NA7|n
+腐る|くさる||NA4|v5r vi aux-v
+不快|ふかい||NA4|n adj-na
+展示品|てんじひん||NA7|n
+姐御肌|あねごはだ||NA9|n adj-no
+必須|ひっす||NA5|adj-no adj-na n
+カリカリ|カリカリ||NA6|adj-na adv-to adv vs
+不機嫌|ふきげん||NA9|adj-na n
+付き物|つきもの||NA9|n
+掲示板|けいじばん||NA7|n
+体調を崩す|たいちょうをくずす||NA10|exp v5s
+悪し様に|あしざまに||NA8|exp adv
+旗頭|はたがしら||NA11|n
+雛人形|ひなにんぎょう||NA11|n
+大和撫子|やまとなでしこ||NA8|n
+配備|はいび||NA11|n vs vt
+争えない|あらそえない||NA16|adj-i
+口論|こうろん|N1|N1|n vs vt vi
+悶着|もんちゃく||NA10|n vs vi
+落とし前|おとしまえ||NA10|n
+英気|えいき||NA13|n
+欠かせない|かかせない||NA13|exp adj-i
+渡り合う|わたりあう||NA13|v5u vi
+耳打ち|みみうち||NA14|n vs vt
+誇示|こじ||NA14|n vs vt
+罵倒|ばとう||NA14|n vs vt
+げんなり|げんなり||NA12|vs adv adv-to
+顰蹙を買う|ひんしゅくをかう||NA12|exp v5u
+遣わす|つかわす||NA13|v5s vt aux-v
+揃う|そろう|N3|N3|v5u vi
+散らす|ちらす|N2|N2|v5s vt suf
+争う|あらそう|N2|N2|v5u vi
+夕顔|ゆうがお||NA14|n
+法学|ほうがく|N2|N2|n
+示す|しめす|N3|N3|v5s vt
+ひそひそ|ひそひそ|N1|N1|adv adv-to
+使い捨て|つかいすて||NA15|adj-no n
+飾り付ける|かざりつける||NA15|v1 vt
+性癖|せいへき||NA15|n
+揉め事|もめごと||NA15|n
+一悶着|ひともんちゃく||NA16|n
+原付|げんつき||NA16|n
+オンパレード|オンパレード||NA17|n
+雛|ひな||NA19|n
+不釣合い|ふつりあい||NA19|n adj-na
+置き忘れる|おきわすれる||NA19|v1 vt
+からっと|からっと||NA19|adv vs
+燻る|くすぶる||NA20|v5r vi
+こりこり|こりこり||NA6|adv adv-to vs
+質|たち||NA13|n
+シャキッと|シャキッと||NA19|adv vs
+決着を付ける|けっちゃくをつける||NA14|exp v1
+送る|おくる|N5|N5|v5r vt
+必要|ひつよう|N5|N5|adj-na n
+大切|たいせつ|N5|N5|adj-na
+しゃきしゃき|しゃきしゃき|N1|N1|adv adv-to vs
+投棄|とうき||NA13|n vs vt
+マスト|マスト||NA18|adj-na n
+ぼそぼそ|ぼそぼそ||NA4|adv adv-to vs adj-na
+片付く|かたづく|N2|N2|v5k vi
+きりっと|きりっと||NA10|adv vs
+性分|しょうぶん||NA13|n
+ＩＳＰ|アイ・エス・ピー||NUNCLASSIFIED|n
+口喧嘩|くちげんか||NA20|n vs vi
+捌く|さばく||NA6|v5k vt
+挫く|くじく||NA4|v5k vt
+晴らす|はらす||NA3|v5s vt
+追い払う|おいはらう||NA20|v5u vt
+誤字|ごじ||NA5|n
+見間違う|みまちがう||NA18|v5u vt
+気質|きしつ|N2|N2|n n-suf
+気立て|きだて|N2|N2|n
+パリパリ|パリパリ||NA19|adj-na adv n
+騒動|そうどう|N2|N2|n vs vi
+北半球|きたはんきゅう||NA1|n
+さくっ|さくっ|N1|N1|adv-to
+散々|さんざん||NA1|adj-na adv
+必要不可欠|ひつようふかけつ||NA1|adj-na adj-no
+吹き飛ばす|ふきとばす||NA2|v5s vt
+丸出し|まるだし||NA3|adj-no n
+取り計らう|とりはからう||NA3|v5u vt
+争うべからざる|あらそうべからざる||NA3|exp adj-pn
+繰り出す|くりだす||NA4|v5s vt vi
+挫ける|くじける||NA4|v1 vi
+利かせる|きかせる||NA4|v1 vt
+ぼそっと|ぼそっと||NA7|adv vs
+解き明かす|ときあかす||NA8|v5s vt
+気に食わない|きにくわない||NA10|exp adj-i
+拭う|ぬぐう||NA10|v5u vt
+無くもがな|なくもがな||NA10|exp adj-no
+しょんぼり|しょんぼり||NA11|adv adv-to vs
+淡々|たんたん||NA11|adj-t adv-to
+不均衡|ふきんこう||NA11|adj-na n
+を巡って|をめぐって||NA12|exp
+吹っ飛ばす|ふっとばす||NA12|v5s vt
+呈する|ていする||NA12|vs-s vt
+売り飛ばす|うりとばす||NA12|v5s vt
+虫の息|むしのいき||NA13|exp n
+散り散り|ちりぢり||NA15|adj-na n
+ボソリ|ボソリ||NA16|adv-to
+小馬鹿にする|こばかにする||NA16|exp vs-i
+見せつける|みせつける||NA18|v1 vt
+論じる|ろんじる||NA20|v1 vt
+気|き|N4|N4|n
+整理|せいり|N3|N3|n vs vt
+意地|いじ|N2|N2|n adj-no
+派遣|はけん|N2|N2|n vs vt
+捌き|さばき||NA9|n n-suf
+処分|しょぶん|N1|N1|n vs vt
+性根|しょうね||NA7|n
+疎開|そかい||NA6|n vs vt vi
+展示|てんじ|N1|N1|n vs vt
+雛|ひよこ|N1|N1|n
+ミスプリント|ミスプリント|N1|N1|n
+表示|ひょうじ||NA4|n vs vt
+南半球|みなみはんきゅう||NA6|n
+伝言ゲーム|でんごんゲーム||NA7|n
+囁き|ささやき||NA8|n
+筋違い|すじちがい||NA15|n vs adj-no adj-na
+とも言う|ともいう||NA7|exp
+漬かる|||NE1|
+澄ます|すます|N2|N2|v5s vt
+こんがらがる|こんがらがる||NA16|v5r vi
+誓う|ちかう|N2|N2|v5u vt
+ドキッと|ドキッと||NA16|adv vs
+炒り卵|いりたまご|N1|N1|n
+慣れる|なれる|N4|N4|v1 vi aux-v
+感慨無量|かんがいむりょう||NA17|n adj-no adj-na
+極まる|きわまる||NA6|v5r vi aux-v adj-f
+申す|もうす|N4|N4|v5s vt
+ドラマ|ドラマ|N3|N3|n
+呼ばれる|よばれる||NA17|v1 vi
+と言うところ|というところ||NA1|exp
+焼き肉|||NE1|
+すっぽん|すっぽん|N4|N4|n
+〜漬け|||NE1|
+学力|がくりょく|N2|N2|n
+載る|のる|N2|N2|v5r vi
+引き出し|ひきだし|N5|N5|n
+巻き物|まきもの||NA1|n
+呪い|のろい|N1|N1|n
+事情通|じじょうつう||NA1|n
+吐く息|はくいき||NA1|
+認識|にんしき|N1|N1|n vs vt
+甘えん坊|あまえんぼう||NA1|n adj-na
+未確定|みかくてい||NA1|adj-no n
+連動|れんどう||NA1|n vs vi
+と言うもの|というもの||NA12|exp
+やり手|やりて||NA17|n
+串焼き|くしやき||NA17|n
+優|ゆう||NA2|n adj-na
+流れる|ながれる||NA2|v1 vi
+自白|じはく||NA3|n vs vt
+抵当権|ていとうけん||NA3|n
+ほろほろ|ほろほろ||NA4|adv adv-to n
+在校生|ざいこうせい||NA4|n
+予知|よち||NA4|n vs vt
+冷や|ひや||NA4|n pref adj-no
+社会人|しゃかいじん||NA5|n
+認知|にんち||NA5|n vs vt
+お冷|おひや||NA6|n
+計画的|けいかくてき||NA6|adj-na
+逆立つ|さかだつ||NA8|v5t vi
+当たり屋|あたりや||NA18|n
+気の強い|きのつよい||NA7|adj-i
+死亡者|しぼうしゃ||NA7|n
+末那|まな||NA18|n
+博識|はくしき||NA7|n adj-na
+明細|めいさい||NA7|n adj-na
+無垢|むく||NA19|adj-na adj-no n
+と言う|という||NA19|exp
+充満|じゅうまん||NA19|n vs vi
+揺れ|ゆれ||NA19|n
+興が醒める|きょうがさめる||NA19|exp v1
+車種|しゃしゅ||NA19|n
+ヨレヨレ|ヨレヨレ||NA19|adj-na adj-no
+帳簿|ちょうぼ||NA10|n
+細か|こまか||NA20|adj-na
+とやら|とやら||NA20|exp suf
+誤爆|ごばく||NA11|n vs
+くぐもった声|くぐもったこえ||NA1|exp n
+野放し|のばなし||NA11|n adj-no
+雑学|ざつがく||NA12|n
+誓約書|せいやくしょ||NA12|n
+板焼き|いたやき||NA12|n
+治る|なおる|N4|N4|v5r vi
+泡盛|あわもり||NA12|n
+湯豆腐|ゆどうふ||NA18|n
+克明|こくめい||NA18|adj-na
+明るみ|あかるみ||NA13|n
+浪人|ろうにん||NA18|n vs vi
+死傷者|ししょうしゃ||NA14|n
+台帳|だいちょう||NA14|n
+罫|けい||NA15|n
+して遣られる|してやられる||NA12|exp v1
+造形物|ぞうけいぶつ||NA15|n
+頭をかかえる|あたまをかかえる||NA15|exp v1
+直る|なおる|N4|N4|v5r vi
+浅学|せんがく||NA16|n adj-no
+引っかかる|ひっかかる|N3|N3|v5r vi
+蘇る|よみがえる|N3|N3|v5r vi
+漬け|づけ||NA17|suf
+凍える|こごえる|N3|N3|v1 vi
+雀|すずめ||NA17|n
+見聞|けんぶん||NA19|n vs vt
+吟醸酒|ぎんじょうしゅ||NA19|n
+余計|よけい|N3|N3|adj-na adv
+重なる|かさなる|N2|N2|v5r vi
+箱入り娘|はこいりむすめ||NA18|n
+無類|むるい||NA20|adj-na adj-no n
+盛り上がる|もりあがる|N1|N1|v5r vi
+身につける|みにつける|N1|N1|exp v1
+詳しい|くわしい|N3|N3|adj-i
+知識|ちしき|N3|N3|n
+定まる|さだまる|N1|N1|v5r vi
+埋まる|うまる|N1|N1|v5r vi
+契る|ちぎる|N1|N1|v5r
+走行|そうこう|N2|N2|n vs vi
+心当たり|こころあたり|N2|N2|n
+未熟|みじゅく|N2|N2|adj-na n
+感無量|かんむりょう|N1|N1|n adj-no adj-na
+達者|たっしゃ|N1|N1|adj-na n
+灯台|とうだい|N2|N2|n
+済み|ずみ||NA2|n-suf n
+きりり|きりり||NA1|adv adv-to
+乱れる|みだれる|N2|N2|v1 vi
+梅干|||NE1|
+臭い|くさい|N3|N3|adj-i suf
+逞しい|たくましい|N2|N2|adj-i
+騒がしい|さわがしい|N2|N2|adj-i
+斑|ぶち|N2|N2|n
+瓶詰め|びんづめ|N2|N2|n vs vt adj-no
+泥々|どろどろ|N1|N1|adj-no adj-na adv adv-to vs
+保証|ほしょう|N2|N2|n vs vt
+了承|りょうしょう|N2|N2|n vs vt
+弁慶|べんけい||NA5|n
+盟約|めいやく||NA18|n vs vt
+潜む|ひそむ||NA8|v5m vi
+孕む|はらむ||NA2|v5m vt vi
+泣寝入り|なきねいり|N1|N1|n vs vi
+心得|こころえ|N1|N1|n n-suf
+造詣が深い|ぞうけいがふかい||NA3|exp adj-i
+一件落着|いっけんらくちゃく||NA6|n
+八重|やえ||NA3|n
+宝冠|ほうかん||NA3|n
+重ね|かさね|N1|N1|n ctr
+冷やし中華|ひやしちゅうか||NA3|n
+自称|じしょう||NA4|adj-f n vs
+集団自決|しゅうだんじけつ||NA4|
+呆ける|ぼける||NA4|v1 vi aux-v
+皺くちゃ|しわくちゃ||NA4|adj-no adj-na n
+ぎざぎざ|ぎざぎざ||NA5|n adj-na adv adv-to vs
+焼酎|しょうちゅう||NA6|n
+指切拳万|ゆびきりげんまん||NA5|n
+焼き鳥|やきとり||NA2|n
+八十日目|やっとかめ||NA6|adj-na
+戦没|せんぼつ||NA2|n vs vi
+表彰|ひょうしょう||NA6|n vs vt
+紅しょうが|べにしょうが||NA15|n
+予定日|よていび||NA6|n
+素養|そよう||NA15|n
+落ち着いた|おちついた||NA2|adj-f
+話し手|はなして||NA6|n
+角のある|かどのある||NA15|exp adj-f
+巻き髪|まきがみ||NA3|n
+ゆで卵|ゆでたまご||NA18|n
+豆知識|まめちしき||NA11|n
+現役|げんえき||NA7|n adj-no
+散らし|ちらし||NA7|n
+既決|きけつ||NA18|adj-no n
+照り焼き|てりやき||NA18|n
+炊ける|たける||NA17|v1 vi
+明細書|めいさいしょ||NA7|n
+領収書|りょうしゅうしょ||NA7|n
+浸かる|つかる||NA4|v5r vi
+あばら屋|あばらや||NA8|n
+たい焼き|たいやき||NA8|n
+斑|むら||NA4|n adj-na
+下積み|したづみ||NA8|n adj-no
+開封|かいふう||NA8|n vs vt
+学|がく||NA8|n n-suf
+卵焼き|たまごやき||NA4|n
+矛|ほこ||NA8|n
+棺を蓋いて事定まる|かんをおおいてことさだまる||NA8|exp
+説得上手|せっとくじょうず||NA1|n adj-na
+五味|ごみ||NA9|n
+惑う|まどう||NA9|v5u vi
+嗜み|たしなみ||NA9|n
+身に覚えの無い|みにおぼえのない||NA9|exp adj-f
+交じり|まじり||NA6|n-suf n
+メンヘラ|メンヘラ||NA10|n
+レトルト|レトルト||NA10|
+渦巻く|うずまく||NA10|v5k vi
+修業|しゅうぎょう||NA6|n vs vt vi
+熟知|じゅくち||NA10|n vs vt
+上下|じょうげ|N3|N3|n vs vi
+常識|じょうしき|N3|N3|n
+評価|ひょうか|N3|N3|n vs vt
+しゃぶしゃぶ|しゃぶしゃぶ|N1|N1|n
+丹念|たんねん||NA10|adj-na n
+承認|しょうにん||NA4|n vs vt
+悶える|もだえる||NA10|v1 vi
+源泉|げんせん||NA8|n
+ポンコツ|ポンコツ||NA11|n adj-na adj-no
+関わり合う|かかわりあう||NA11|v5u
+誓約|せいやく||NA11|n vs vt
+巻き添え|まきぞえ||NA9|n
+筋骨隆々|きんこつりゅうりゅう||NA9|adj-na adj-no adj-t adv-to
+ばさばさ|ばさばさ||NA12|adv-to adv vs adj-na
+修羅|しゅら||NA10|n
+太巻き|ふとまき||NA10|n
+ＤＱＮ|ドキュン||NA11|n
+自他共に認める|じたともにみとめる||NA13|exp v1
+認定|にんてい||NA13|n vs vt
+猫又|ねこまた||NA13|n
+前代未聞|ぜんだいみもん||NA13|n adj-no
+用済み|ようずみ||NA13|n adj-no
+乱世|らんせい||NA13|n
+ウハウハ|ウハウハ||NA14|adj-na adv vs
+漬物|つけもの||NA14|n
+有耶無耶|うやむや||NA14|adj-na n
+咽ぶ|むせぶ||NA12|v5b vi
+盛り|もり||NA12|n n-suf ctr
+斑|まだら||NA12|n adj-na adj-no
+有職|ゆうしょく||NA12|n
+忍び笑い|しのびわらい||NA13|n
+べた|べた||NA13|adj-na n n-pref adj-no
+車両|しゃりょう||NA4|n
+途方に暮れる|とほうにくれる||NA13|exp v1
+浮き足|うきあし||NA13|n
+又とない|またとない||NA13|exp
+立て込む|たてこむ||NA13|v5m vi
+閊える|つかえる||NA13|v1 vi
+一定|いってい|N3|N3|vs vt vi adj-no
+詰まる|つまる|N2|N2|v5r vi
+弱る|よわる|N2|N2|v5r vi
+精密|せいみつ|N2|N2|adj-na n
+皺皺|しわしわ||NA14|adv
+いわゆる|いわゆる|N3|N3|adj-pn
+塞がる|ふさがる|N3|N3|v5r vi
+ぱんぱん|ぱんぱん|N1|N1|adv adv-to adj-na n
+廃人|はいじん||NA15|n suf
+がり|がり||NA16|n
+せこい|せこい||NA16|adj-i
+びっくり|びっくり|N5|N5|vs vi adv adj-f
+早贄|はやにえ||NA16|n
+盛りそば|もりそば||NA16|n
+眼鏡にかなう|めがねにかなう||NA16|exp v5u
+笠子|かさご||NA16|n
+罫紙|けいし||NA16|n
+入母屋|いりもや||NA17|n
+焼肉|やきにく||NA17|n
+知|ち||NA17|n
+錯綜|さくそう||NA19|n vs vi
+籠もる|こもる|N1|N1|v5r vi
+とも|とも||NA1|prt exp
+雉鳩|きじばと||NA18|n
+むしゃむしゃ|むしゃむしゃ||NA19|adv adv-to
+ゴツゴツ|ゴツゴツ||NA19|vs adv adj-no n
+ぐしゃぐしゃ|ぐしゃぐしゃ||NA19|adj-na adv adv-to vs
+物知り|ものしり||NA20|n
+もじゃもじゃ|もじゃもじゃ||NA10|adv vs adj-na adj-no
+有らずもがな|あらずもがな||NA10|exp adj-no
+噎せる|むせる||NA12|v1 vi
+酔いしれる|よいしれる||NA13|v1 vi
+決まる|きまる|N5|N5|v5r vi
+台無し|だいなし|N1|N1|adj-na n
+痛む|いたむ|N1|N1|v5m vi
+浅い|あさい|N4|N4|adj-i
+腕が無い|うでがない||NA7|exp adj-i
+困る|こまる|N5|N5|v5r vi
+叶う|かなう|N5|N5|v5u
+腕が良い|うでがよい|N1|N1|exp adj-ix
+弱い|よわい|N5|N5|adj-i
+どきり|どきり|N1|N1|adv adv-to vs n
+ややこしい|ややこしい|N1|N1|adj-i
+飲み込む|のみこむ|N1|N1|v5m vt
+水田|すいでん|N1|N1|n
+恐れ入る|おそれいる|N1|N1|v5r vi
+迷う|まよう|N2|N2|v5u vi
+落ち着く|おちつく|N2|N2|v5k vi
+絶世|ぜっせい||NA18|adj-no n
+詳解|しょうかい||NA15|n vs vt
+橇|そり||NA15|n
+ぎょっと|ぎょっと||NA10|adv vs
+一通り|ひととおり|N2|N2|n adj-no adv
+剣|けん|N1|N1|n
+二輪車|にりんしゃ||NA19|n
+持てる|もてる|N4|N4|v1 vi adj-f
+巻き寿司|まきずし||NA17|n
+ＬＥＤ|エル・イー・ディー||NUNCLASSIFIED|n
+生兵法|なまびょうほう||NA14|n
+落着|らくちゃく||NA5|n vs vi
+あちこち|あちこち|N3|N3|pn adv vs vi adj-na n
+宣誓|せんせい||NA5|n vs vt
+肉汁|にくじゅう||NA16|n
+礼状|れいじょう||NA18|n
+眉唾|まゆつば||NA12|n
+まとまる|まとまる|N3|N3|v5r vi
+定評|ていひょう||NA2|n
+在学|ざいがく|N3|N3|n vs vi
+縮れる|ちぢれる|N3|N3|v1 vi
+承知|しょうち|N3|N3|n vs vt
+人知|じんち||NA13|n
+神楽笛|かぐらぶえ||NA16|n
+ぐらつく|ぐらつく||NA15|v5k vi
+偏差値|へんさち||NA8|n
+甘える|あまえる|N1|N1|v1 vi
+精緻|せいち||NA19|adj-na n
+着火|ちゃっか||NA1|n vs vt vi
+悩む|なやむ||NA6|v5m vi
+未遂|みすい||NA10|n n-suf adj-no
+勝手|かって|N1|N1|n adj-na n-pref
+わくわく|わくわく|N1|N1|vs adv adv-to
+告白|こくはく|N2|N2|n vs vt vi
+無茶苦茶|むちゃくちゃ|N2|N2|adj-na n adv
+モテる|モテる|N2|N2|v1 vi
+ボサボサ|ボサボサ||NA19|adj-no adj-na adv adv-to vs
+ダブる|ダブる|N1|N1|v5r vi
+期する|きする||NA12|vs-s vt
+知り尽くす|しりつくす||NA2|v5s
+めそめそ|めそめそ|N1|N1|adv adv-to vs
+しんどい|しんどい|N1|N1|adj-i
+収まる|おさまる|N1|N1|v5r vi
+ぼやぼや|ボヤボヤ||NA1|vs adv adv-to adj-na
+本格的|ほんかくてき||NA1|adj-na
+眩む|くらむ||NA1|v5m vi
+詳密|しょうみつ||NA2|adj-na n
+流動的|りゅうどうてき||NA2|adj-na
+微細|びさい||NA2|adj-na n
+事細かい|ことこまかい||NA3|adj-i
+冷やし|ひやし||NA3|n-pref n
+相まって|あいまって||NA4|adv
+付け上がる|つけあがる||NA4|v5r vi
+くしゃくしゃ|くしゃくしゃ||NA5|adj-no adj-na adv adv-to vs
+気が立つ|きがたつ||NA6|exp v5t
+戦々恐々|せんせんきょうきょう||NA7|adv-to adj-t adj-na vs
+湛える|たたえる||NA7|v1 vt
+好奇心は猫をも殺す|こうきしんはねこをもころす||NA8|exp v5s
+無印|むじるし||NA8|adj-no
+縺れる|もつれる||NA8|v1 vi
+詳らか|つまびらか||NA9|adj-na
+先生と言われるほどの馬鹿でなし|せんせいといわれるほどのばかでなし||NA9|exp
+惰弱|だじゃく||NA9|adj-na n
+能ある鷹は爪を隠す|のうあるたかはつめをかくす||NA9|exp v5s
+類稀|たぐいまれ||NA9|adj-na
+怪訝|けげん||NA10|adj-na
+絶倫|ぜつりん||NA10|adj-no adj-na n
+縮こまる|ちぢこまる||NA11|v5r vi
+宙に浮く|ちゅうにうく||NA11|exp v5k
+言い含める|いいふくめる||NA12|v1 vt
+酢の物|すのもの||NA12|exp n
+相まつ|あいまつ||NA12|v5t vi v4t vt
+絡み合う|からみあう||NA12|v5u vi
+噛んで含めるように|かんでふくめるように||NA13|exp
+魂消る|たまげる||NA13|v1 vi
+入り混じる|いりまじる||NA13|v5r vi
+珍紛漢紛|ちんぷんかんぷん||NA15|n adj-na
+日の目を見る|ひのめをみる||NA15|exp v1
+白ける|しらける||NA15|v1 vi
+満ちる|みちる||NA16|v1 vi
+知らぬ存ぜぬ|しらぬぞんぜぬ||NA16|exp n
+なる|なる||NA19|suf adj-f int
+舞い上がる|まいあがる||NA19|v5r vi
+釣り上がる|つりあがる||NA18|v5r vi
+露|あらわ||NA18|adj-na
+死に損なう|しにそこなう||NA18|v5u vi
+なみなみ|なみなみ||NA20|adv-to adv
+漲る|みなぎる||NA20|v5r vi
+冷え込む|ひえこむ||NA20|v5m vi
+埒があかない|らちがあかない||NA20|exp adj-i
+っちゅう|っちゅう||NA20|conj
+切妻|きりづま||NA17|n
+棚|たな|N4|N4|n
+下地|したじ|N1|N1|n
+刃|やいば|N1|N1|n
+倒産|とうさん|N1|N1|n vs vi
+封書|ふうしょ||NA3|n
+三輪車|さんりんしゃ|N1|N1|n
+肉離れ|にくばなれ||NA5|n vs vi
+渇き|かわき||NA12|n
+言質|げんち||NA4|n
+双葉|ふたば||NA6|n
+廃部|はいぶ||NA1|n vs
+玄米|げんまい||NA8|n
+無双|むそう||NA6|n adj-no vs
+白湯|さゆ||NA10|n
+半殺し|はんごろし||NA10|n
+縷説|るせつ||NA12|n vs vt
+殉職|じゅんしょく||NA14|n vs vi
+曲者|くせもの||NA18|n
+守備範囲|しゅびはんい||NA18|n
+スキンシップ|スキンシップ||NA7|n
+お腹を壊す|おなかをこわす|N4|N4|exp v5s
+町|まち|N5|N5|n
+間違い|まちがい|N4|N4|n
+間違える|まちがえる|N4|N4|v1 vt
+台|だい|N4|N4|n n-suf ctr suf
+薬学|やくがく||NA17|n
+匂い|におい|N4|N4|n
+ベルト|ベルト|N3|N3|n
+マッチ|マッチ|N3|N3|n
+ミシン|ミシン|N3|N3|n
+洗濯機|||NE1|
+ゴロゴロ|ゴロゴロ|N5|N5|adv adv-to vs vi n
+胃|い|N3|N3|n
+外交|がいこう|N3|N3|n
+型|かた|N3|N3|n n-suf
+秤|はかり|N3|N3|n
+手間賃|てまちん||NA16|n
+町中|まちなか||NA6|n
+猿|さる|N4|N4|n
+設置|せっち|N2|N2|n vs vt
+優越|ゆうえつ|N2|N2|n vs vi
+留守番電話|るすばんでんわ||NGENKI2-2ND|
+アマチュア|アマチュア|N1|N1|n adj-no
+加工|かこう|N1|N1|n vs vt
+下っ腹|したっぱら||NA1|n
+待ち合わせ|まちあわせ|N4|N4|n
+本体|ほんたい|N1|N1|n
+薬剤師|やくざいし|N1|N1|n
+ミスマッチ|ミスマッチ||NA1|n
+町役場|まちやくば||NA1|n
+始動|しどう||NA2|n vs vt vi
+親しみ|したしみ||NA2|n
+お腹が空く|おなかがすく|N5|N5|exp v5k
+窶れる|やつれる||NA2|v1 vi
+医薬|いやく||NA4|n adj-no
+洗濯機|せんたくき||NA17|n
+紫陽花|あじさい||NA16|n
+町並み|まちなみ||NA4|n
+格納|かくのう||NA5|n vs vt
+自動販売機|じどうはんばいき||NA5|n
+心待ち|こころまち||NA6|n vs vt
+クリオネ|クリオネ||NA7|n
+べったり|べったり||NA18|adv adv-to
+胸元|むなもと||NA18|n
+親交|しんこう||NA18|n
+マシンガン|マシンガン||NA8|n
+機関銃|きかんじゅう||NA8|n
+溜飲|りゅういん||NA19|n
+薬|くすり|N5|N5|n
+筐体|きょうたい||NA10|n
+お腹をこわす|おなかをこわす||NGENKI2-2ND|
+何てこった|なんてこった|N1|N1|int
+待ちに待った|まちにまった|N1|N1|exp adj-f
+実機|じっき||NA11|n
+一台|||NE1|n
+待ちぼうけ|まちぼうけ||NA17|n
+至上主義|しじょうしゅぎ||NA12|n
+胸焼け|むねやけ||NA17|n vs vi
+自販機|じはんき||NA17|n
+胃痛|いつう||NA18|n
+運転|うんてん|N5|N5|n vs vt vi
+ちまちま|ちまちま||NA14|adv-to adv
+丸まっちい|まるまっちい||NA19|adj-i
+抹茶|まっちゃ||NA17|n
+甘っちょろい|あまっちょろい||NA14|adj-i
+錠剤|じょうざい||NA17|n
+待ち遠しい|まちどおしい|N4|N4|adj-i
+入魂|にゅうこん||NA17|n vs adj-no
+もたれる|もたれる|N3|N3|v1 vi
+機械工|きかいこう||NA17|n
+匂う|におう|N3|N3|v5u vi
+鯖|さば||NA17|n
+斬る|きる|N2|N2|v5r vt
+心肺|しんぱい||NA18|n adj-no
+レインコート|レインコート|N3|N3|n
+街角|まちかど|N3|N3|n
+マッチ|マッチ|N1|N1|n vs vi
+操る|あやつる|N2|N2|v5r vt
+待ち合わせる|まちあわせる|N3|N3|v1
+待合室|まちあいしつ|N3|N3|n
+バチコーン|バチコーン||NA7|int
+親密|しんみつ|N1|N1|adj-na n
+お腹|おなか|N5|N5|n
+給油|きゅうゆ|N1|N1|n vs vt vi
+懇意|こんい||NA2|n adj-na
+過ち|あやまち|N1|N1|n
+塊魂|||NE1|
+扱い方|あつかいかた||NA3|n
+馴染み|なじみ||NA3|n adj-no
+痩せ|やせ||NA6|n
+留守電|るすでん||NA3|n
+待ちきれない|まちきれない||NA6|exp adj-i
+待ち望む|まちのぞむ|N1|N1|v5m vt
+愛称|あいしょう|N1|N1|n
+腹一杯|はらいっぱい||NA4|n adv
+ゲーム機|ゲームき||NA5|n
+みんみん蝉|みんみんぜみ||NA5|n
+張りぼて|はりぼて||NA6|n
+消音|しょうおん||NA5|n vs vt vi
+衰え|おとろえ||NA5|n
+海老で鯛を釣る|えびでたいをつる||NA15|exp v5r
+町外れ|まちはずれ||NA17|n
+待合|まちあい||NA2|n vs
+腹巻き|はらまき||NA15|n
+ママチャリ|ママチャリ||NA3|n
+両替機|りょうがえき||NA15|n
+マッチョ|マッチョ||NA7|n
+腹|はら||NA18|n suf ctr
+隣町|となりまち||NA7|n
+薬局|やっきょく|N3|N3|n
+空腹感|くうふくかん||NA8|n
+胃袋|いぶくろ||NA5|n
+平手打ち|ひらてうち||NA11|n vs
+待ち|まち||NA8|n n-suf
+お仕置き|おしおき||NA9|n vs vt
+急接近|きゅうせっきん||NA9|n vs
+絡繰り|からくり||NA5|n
+制御|せいぎょ||NA6|n vs vt
+室町|むろまち||NA10|n
+宿場町|しゅくばまち||NA10|n
+中世|ちゅうせい|N2|N2|n
+至上|しじょう||NA11|n adj-no
+制圧|せいあつ||NA11|n vs vt
+締め鯖|しめさば||NA11|n
+胃腸|いちょう||NA12|n
+切支丹|きりしたん||NA9|n
+生中継|なまちゅうけい||NA12|n vs vt
+どストライク|どストライク||NA11|n adj-na
+券売機|けんばいき||NA13|n
+拮抗|きっこう||NA13|n vs vi
+しかめっ面|しかめっつら||NA14|n adj-no
+舌打ち|したうち||NA11|n vs vi
+憔悴|しょうすい||NA12|n vs vi
+顰める|しかめる||NA12|v1 vt
+間違う|まちがう|N2|N2|v5u
+弱まる|よわまる|N2|N2|v5r vi
+蜂の巣|はちのす||NA14|exp n
+待ち受け|まちうけ||NA15|n
+やせ衰える|やせおとろえる||NA16|v1 vi
+町家|まちや||NA16|n
+稼働|かどう||NA16|n vs vt vi
+薬屋|くすりや||NA16|n
+衰残|すいざん||NA5|adj-na n
+ぽんぽこ|ぽんぽこ|N1|N1|adv n adj-na
+腹痛|ふくつう||NA2|n
+鳩尾|みぞおち||NA17|n
+ガタがくる|ガタがくる||NA2|exp vk
+お待ち遠様|おまちどおさま|N3|N3|exp
+食洗機|しょくせんき||NA16|n
+下腹|かふく||NA8|n
+マッハ|マッハ||NA18|n
+忽ち|たちまち|N3|N3|adv
+ガチャガチャ|ガチャガチャ||NA19|adv adv-to adj-na n
+下町|したまち|N2|N2|n
+天下|てんか||NA2|n adj-no
+一儀|いちぎ||NA1|n
+機械|きかい|N2|N2|n
+港町|みなとまち|N1|N1|n
+取り扱う|とりあつかう|N2|N2|v5u vt
+オートマチック|オートマチック|N1|N1|adj-no adj-na n
+懇親|こんしん||NA2|n
+区々|まちまち|N1|N1|adj-no adj-na n
+待ちに待つ|まちにまつ|N1|N1|exp v5t
+扱う|あつかう||NA1|v5u vt
+信愛|しんあい||NA1|adj-na n vs
+清潔|せいけつ||NA2|adj-na n
+待ち兼ねる|まちかねる||NA2|v1 vt
+がぶがぶ|がぶがぶ||NA5|adv adv-to adj-na
+ドラマチック|ドラマチック||NA5|adj-na
+ぺんぺん|ぺんぺん||NA5|adv adv-to vs n
+間違いなく|まちがいなく||NA5|adv
+間違っても|まちがっても||NA6|exp adv
+心待ちにする|こころまちにする||NA6|exp vs-i
+一歩間違うと|いっぽまちがうと||NA8|exp
+がましい|がましい||NA9|suf adj-i
+腹の虫|はらのむし||NA9|exp n
+腹の虫が鳴る|はらのむしがなる||NA9|exp v5r
+塩っぱい|しょっぱい||NA11|adj-i
+待ち受ける|まちうける||NA12|v1 vt
+過ちを犯す|あやまちをおかす||NA13|exp v5s
+調子が狂う|ちょうしがくるう||NA14|exp v5u
+舌鼓を打つ|したつづみをうつ||NA19|exp v5t
+ポン|ぽん||NA19|adv adv-to suf
+誼|よしみ||NA17|n
+沼地|ぬまち|N1|N1|n
+主権|しゅけん|N2|N2|n
+ガチャ|ガチャ||NA6|n n-suf
+秋刀魚|さんま|N1|N1|n
+作動中|さどうちゅう||NA2|n adj-no
+嘈囃|そうざつ||NA12|n vs
+複写機|ふくしゃき||NA13|n
+大間違い|おおまちがい||NA18|n
+舌鼓|したつづみ||NA19|n
+マシン|マシン||NA20|n
+待ち伏せ|まちぶせ||NA19|n vs vt
+医薬品|いやくひん||NA4|n
+鯵|あじ||NA6|n
+潮吹き|しおふき||NA10|n vs vi
+機械音痴|きかいおんち||NA15|n
+プレス|プレス||NA19|n vs vt vi
+紅白|こうはく||NA4|n adj-no
+ＮＨＫ受信料|エヌエイチケーじゅしんりょう||NA2|n
+ＮＨＫ|エヌエイチケー||NUNCLASSIFIED|n
+ＮＨＫ|エヌ・エイチ・ケー||NUNCLASSIFIED|n
+点|てん|N5|N5|n ctr
+目玉|めだま||NA1|n
+倫理観|りんりかん||NA16|n
+我慢汁|がまんじる|N1|N1|n
+ポーポー|ポーポー||NA8|n
+見方|みかた|N1|N1|n
+反対意見|はんたいいけん||NA13|n
+鈍間|のろま||NA20|n adj-na
+ビューポート|ビューポート||NA19|n
+色眼鏡で見る|いろめがねでみる||NA7|exp v1
+として|として||NA19|exp
+アカウント|アカウント||NUNCLASSIFIED|n
+アップルウォッチ|アップルウォッチ||NUNCLASSIFIED|n
+アップルパイ|アップルパイ||NUNCLASSIFIED|n
+歩き続ける|あるきつづける||NUNCLASSIFIED|v1
+言い直す|いいなおす||NUNCLASSIFIED|v5s vt
+イタリアン|イタリアン||NUNCLASSIFIED|adj-f n
+エスプレッソ|エスプレッソ||NUNCLASSIFIED|
+Ｌサイズ|エルサイズ|N5|N5|n
+オーナメント|オーナメント||NUNCLASSIFIED|n
+おっちゃん|おっちゃん||NUNCLASSIFIED|n
+よろしくお伝えください|よろしくおつたえください|N4|N4|
+馬鹿馬鹿しい|ばかばかしい|N1|N1|adj-i
+カバ|カバ||NUNCLASSIFIED|
+河馬|かば||NA12|n
+鞄|かばん|N5|N5|n
+カバー|カバー|N3|N3|n vs vt
+クレヨン|クレヨン||NUNCLASSIFIED|
+蟋蟀|こおろぎ||NA1|n
+シャドーイング|シャドーイング||NUNCLASSIFIED|n vs vi
+現状把握|げんじょうはあく||NA12|n
+蒸発|じょうはつ|N2|N2|n vs vi
+地上波|ちじょうは||NA14|n adj-no
+近づく|ちかづく|N2|N2|v5k vi
+どこ|どこ|N5|N5|pn
+熟|つくづく|N1|N1|adv adv-to
+礎を築く|いしずえをきずく||NA9|exp v5k
+頷く|うなずく|N3|N3|v5k vi
+築く|きずく|N2|N2|v5k vt
+躓く|つまずく|N3|N3|v5k vi
+滴|しずく|N1|N1|n
+黒ずくめ|くろずくめ||NA8|n
+跪く|ひざまずく||NA11|v5k vi
+一滴|いってき||NA13|n
+腕ずく|うでずく||NA16|n adj-no
+力ずく|ちからずく||NA18|n adj-no
+気づく|きづく|N1|N1|v5k vi
+尽く|ずく||NUNCLASSIFIED|suf
+銑|ずく||NUNCLASSIFIED|n
+懐く|なつく|N1|N1|v5k vi
+力尽くで|ちからずくで||NA5|exp adv
+水臭い|みずくさい||NA6|adj-i
+疼く|うずく||NA9|v5k vi
+蹲る|うずくまる||NA9|v5r vi
+基づく|もとづく||NA20|v5k vi
+ずく|ずく||NUNCLASSIFIED|n
+素晴らしさ|すばらしさ||NUNCLASSIFIED|n
+大切にする|たいせつにする|N4|N4|exp vs-i
+切に|せつに||NUNCLASSIFIED|adv
+大切に|たいせつに||NA4|adv
+セリフ|セリフ||NUNCLASSIFIED|n
+台詞|せりふ|N1|N1|n
+ゾンビ|ゾンビ||NA20|n
+タイピング|タイピング||NUNCLASSIFIED|n
+堕する|だする||NUNCLASSIFIED|vs-s vi
+たった今|たったいま||NA2|adv
+タッチパネル|タッチパネル||NUNCLASSIFIED|n
+タブレット|タブレット||NUNCLASSIFIED|n
+タロウ|タロウ||NUNCLASSIFIED|n
+居づらい|いづらい||NA6|exp adj-i
+見づらい|みづらい||NA6|adj-i
+辛い|づらい||NA6|suf adj-i
+分かり辛い|わかりづらい||NA8|adj-i
+デジタイザ|デジタイザ||NUNCLASSIFIED|n
+止まれ|とまれ||NUNCLASSIFIED|exp
+とまれ|とまれ||NUNCLASSIFIED|adv
+トレーニング|トレーニング|N3|N3|n vs vi
+トレーナー|トレーナー|N4|N4|n
+イメトレ|イメトレ||NA9|n
+ウェイトレス|ウェイトレス|N3|N3|n
+デモンストレーション|デモンストレーション|N1|N1|n
+ストレイシープ|ストレイシープ||NA12|n
+トレ|トレ||NUNCLASSIFIED|n-suf
+トレーラー|トレーラー||NA14|n
+豚骨|とんこつ||NA6|n
+とんこつ|とんこつ||NUNCLASSIFIED|n
+豚骨ラーメン|とんこつラーメン||NA17|n
+何だ|なんだ||NA16|int
+泣かせる|なかせる||NUNCLASSIFIED|v1 vt
+ナッツ|ナッツ||NUNCLASSIFIED|n
+ピーナッツ|ピーナッツ|N5|N5|n
+ネイティブ|ネイティブ||NA11|adj-na n
+ネイティブスピーカー|ネイティブスピーカー||NA11|n
+はあはあ|はあはあ||NA19|adv vs
+パイン|パイン||NUNCLASSIFIED|n
+パイナップル|パイナップル||NA20|n
+バスケ|バスケ||NUNCLASSIFIED|n
+バスケットボール|バスケットボール||NA20|n
+侍る|はべる||NA10|v5r vi
+ハリー・ポッター|ハリー・ポッター||NUNCLASSIFIED|n
+フライドポテト|フライドポテト||NA1|n
+ブラックホール|ブラックホール||NUNCLASSIFIED|n
+降り始める|ふりはじめる||NUNCLASSIFIED|v1 vi
+プロテイン|プロテイン||NA9|n
+ベジタリアン|ベジタリアン||NUNCLASSIFIED|n adj-no adj-na
+ＰＥＴボトル|ペットボトル||NUNCLASSIFIED|n
+真っ先に|まっさきに||NA7|adv
+見回る|みまわる||NUNCLASSIFIED|v5r vi
+目茶苦茶|めちゃくちゃ|N4|N4|adj-na n adv
+破茶滅茶|はちゃめちゃ||NA16|adj-na n
+持って来い|もってこい||NA1|exp adj-no
+今日中に|きょうじゅうに|N4|N4|adv
+収入|しゅうにゅう|N4|N4|n
+駐日|ちゅうにち||NA18|adj-f
+注入|ちゅうにゅう||NA3|n vs vt
+牛肉|ぎゅうにく|N5|N5|n
+吸入|きゅうにゅう||NA6|n vs adj-no
+仲人|なこうど|N1|N1|n
+興行収入|こうぎょうしゅうにゅう||NA5|n
+中二病|ちゅうにびょう||NA9|n
+就任|しゅうにん|N3|N3|n vs vi
+急に|きゅうに|N4|N4|adv
+収入源|しゅうにゅうげん||NA13|n
+住人|じゅうにん|N1|N1|n
+死中に活を求める|しちゅうにかつをもとめる||NA3|exp v1
+十二分|じゅうにぶん||NA16|adj-na adj-no n
+眼中にない|がんちゅうにない||NA16|exp adj-i
+牛乳|ぎゅうにゅう|N5|N5|n
+十二支|じゅうにし|N1|N1|n
+ヨーダ|ヨーダ||NUNCLASSIFIED|n
+通常の場合|つうじょうのばあい||NA5|n
+今生の別れ|こんじょうのわかれ||NA14|exp n
+今日のところは|きょうのところは||NA20|exp
+臆病者|おくびょうもの||NA4|n
+城門|じょうもん||NA11|n
+弔問|ちょうもん||NA4|n vs vt
+聴聞|ちょうもん||NA14|n vs vt
+縄文|じょうもん||NA14|n
+一行物|いちぎょうもの||NA8|n
+消耗|しょうもう|N2|N2|n vs vt vi
+消耗品|しょうもうひん||NA19|n
+強がる|つよがる||NA1|v5r vi
+善がる|よがる||NA16|v5r vi
+ライフセーバー|ライフセーバー||NUNCLASSIFIED|n
+ラムネ|ラムネ||NA5|n
+リュックサック|リュックサック|N1|N1|n
+リュック|リュック||NA1|n
+ロードオブザリング|ロードオブザリング||NUNCLASSIFIED|n
+初日の出|はつひので|N1|N1|exp n
+力仕事|ちからしごと|N4|N4|n
+単品|たんぴん||NA4|n
+同文|どうぶん||NUNCLASSIFIED|n adj-no
+声優|せいゆう|N1|N1|n
+お姉ちゃん|おねえちゃん||NA20|n
+姉ちゃん|ねえちゃん||NUNCLASSIFIED|n
+嫁さん|よめさん||NUNCLASSIFIED|n
+子沢山|こだくさん||NA7|n adj-no adj-na
+手作業|てさぎょう||NUNCLASSIFIED|n
+日本円|にほんえん||NUNCLASSIFIED|n
+早める|はやめる|N1|N1|v1 vt
+早め|はやめ||NA4|adj-no adj-na n
+早めに|はやめに||NA5|adv
+本当は|ほんとうは|N4|N4|
+仕出かす|しでかす||NA2|v5s vt
+来す|きたす||NA3|v5s vt
+出来す|でかす||NA6|v5s vt
+そぞろ歩き|そぞろあるき||NA14|n vs vi
+飲み歩き|のみあるき||NA7|n
+歩き|あるき||NUNCLASSIFIED|n adj-no
+よちよち歩き|よちよちあるき||NA13|n adj-no
+気持ちいい|||NE1|
+気持ち良い|きもちよい|N1|N1|adj-ix
+水疱瘡|みずぼうそう||NA6|n
+おせっかい焼き|おせっかいやき||NA16|n
+蒸し焼き|むしやき||NA19|n
+焼付ける|やきつける||NA19|v1 vt
+焼印|やきいん||NA8|n
+すき焼き|すきやき||NA20|n
+焼き芋|やきいも||NA18|n
+焼き餅焼き|やきもちやき||NA4|n
+焼き窯|やきがま||NA6|n
+炭火焼き|すみびやき||NA3|n
+どら焼き|どらやき||NA4|n
+姿焼き|すがたやき||NA11|n
+鉄板焼き|てっぱんやき||NA12|n
+焼きもち|やきもち||NA13|n
+焼きが回る|やきがまわる||NA14|exp v5r
+焼き|やき||NUNCLASSIFIED|n n-suf
+焼きごて|やきごて||NA13|n
+焼き払う|やきはらう||NA12|v5u vt
+目玉焼き|めだまやき||NA1|n
+焼きそば|やきそば||NA20|n
+父上|ちちうえ||NUNCLASSIFIED|n
+短パン|たんパン||NA7|n
+空耳|そらみみ||NA9|n
+網棚|あみだな||NUNCLASSIFIED|n
+自信満々|じしんまんまん||NA3|adj-na adj-no adj-t adv-to
+重金属|じゅうきんぞく||NA8|n
+食いしん坊|くいしんぼう||NA1|n adj-na adj-no
+食い下がる|くいさがる||NA18|v5r vi
+大食い|おおぐい||NA7|n adj-na vs
+食い入るように|くいいるように||NA16|exp adv
+食い|くい||NUNCLASSIFIED|n
+犬食い|いぬぐい|N1|N1|n vs vi
+面食い|めんくい||NA3|n
+食い物|くいもの|N1|N1|n
+虫食い|むしくい||NA4|adj-no n
+盗み食い|ぬすみぐい||NA8|n vs vt
+共食い|ともぐい||NA8|n vs vi
+食い違い|くいちがい||NA11|n
+食いつく|くいつく||NA8|v5k vi
+人食い|ひとくい|N1|N1|n adj-no
+踊り食い|おどりぐい||NA14|n
+食い違う|くいちがう|N2|N2|v5u vi
+食い扶持|くいぶち||NA14|n
+食いしばる|くいしばる||NA16|v5r vt
+食い倒れ|くいだおれ||NA17|n
+拾い食い|ひろいぐい||NA16|n vs
+大物食い|おおものぐい||NA8|n
+食い入る|くいいる||NA16|v5r vi
+食い止める|くいとめる||NA5|v1 vt
+痩せの大食い|やせのおおぐい||NA7|exp n
+食い殺す|くいころす||NA10|v5s vt
+木食い虫|きくいむし||NA1|n

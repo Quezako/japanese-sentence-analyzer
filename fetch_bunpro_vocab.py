@@ -2,7 +2,7 @@
 fetch_bunpro_vocab.py
 ---------------------
 Interroge l'API Bunpro pour une liste de mots japonais et enregistre
-les résultats (word, jlpt_level, tags, reading, meaning) dans un CSV.
+les résultats (word, reading, jlpt_level, tags) dans un CSV.
 
 Usage:
   # Depuis le CSV de test (colonne jlpt_no_katakana) :
@@ -25,6 +25,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 
 import requests
 
@@ -51,6 +52,213 @@ PAYLOAD_TEMPLATE = {
 }
 
 JLPT_TAG_RE = re.compile(r'\bJLPT[_-]?(N?\d)\b', re.IGNORECASE)
+OUTPUT_FIELDNAMES = ["word", "reading", "jlpt_level", "jlpt_level_raw", "tags"]
+VALID_JLPT_LEVELS = {"N1", "N2", "N3", "N4", "N5"}
+STATE_SUFFIX = ".state.json"
+
+LETTER_NAME_MAP = {
+    "あーる": "r",
+    "あい": "i",
+    "いー": "e",
+    "う゛ぃ": "v",
+    "えっくす": "x",
+    "えっち": "h",
+    "えぬ": "n",
+    "えふ": "f",
+    "えむ": "m",
+    "える": "l",
+    "えー": "a",
+    "えす": "s",
+    "おー": "o",
+    "きゅー": "q",
+    "けー": "k",
+    "しー": "c",
+    "じぇい": "j",
+    "じぇー": "j",
+    "じー": "g",
+    "ずぃー": "z",
+    "ぜっと": "z",
+    "てぃー": "t",
+    "てー": "t",
+    "でぃー": "d",
+    "でー": "d",
+    "ぴー": "p",
+    "びー": "b",
+    "ふい": "v",
+    "ぶい": "v",
+    "ゆー": "u",
+    "わい": "y",
+    "だぶりゅー": "w",
+    "えいち": "h",
+}
+LETTER_NAME_KEYS = sorted(LETTER_NAME_MAP.keys(), key=len, reverse=True)
+
+
+def kata_to_hira(text: str) -> str:
+    chars = []
+    for char in str(text or ''):
+        code = ord(char)
+        if 0x30A1 <= code <= 0x30F6:
+            chars.append(chr(code - 0x60))
+        else:
+            chars.append(char)
+    return ''.join(chars)
+
+
+def normalize_match_text(value: str) -> str:
+    text = unicodedata.normalize("NFKC", str(value or "")).casefold().strip()
+    text = re.sub(r"[\s\u3000・･·•.。,，､/／_-]+", "", text)
+    return text
+
+
+def kana_letter_names_to_ascii(value: str) -> str:
+    source = normalize_match_text(kata_to_hira(value))
+    if not source:
+        return ''
+
+    letters = []
+    index = 0
+    while index < len(source):
+        matched = False
+        for key in LETTER_NAME_KEYS:
+            if source.startswith(key, index):
+                letters.append(LETTER_NAME_MAP[key])
+                index += len(key)
+                matched = True
+                break
+        if not matched:
+            return ''
+    return ''.join(letters)
+
+
+def build_exact_match_keys(value: str) -> set[str]:
+    keys = set()
+    normalized = normalize_match_text(value)
+    if normalized:
+        keys.add(normalized)
+
+    letter_name_ascii = kana_letter_names_to_ascii(value)
+    if letter_name_ascii:
+        keys.add(letter_name_ascii)
+
+    return keys
+
+
+def is_exact_match(query: str, word: str, reading: str) -> bool:
+    query_keys = build_exact_match_keys(query)
+    if not query_keys:
+        return False
+    candidate_keys = build_exact_match_keys(word) | build_exact_match_keys(reading)
+    return bool(query_keys & candidate_keys)
+
+
+def is_classified_entry(row: dict) -> bool:
+    jlpt_level = str(row.get("jlpt_level", "")).strip().upper()
+    jlpt_level_raw = str(row.get("jlpt_level_raw", "")).strip().upper()
+    return jlpt_level in VALID_JLPT_LEVELS or (bool(jlpt_level_raw) and jlpt_level_raw != "NUNCLASSIFIED")
+
+
+def should_keep_entry(row: dict) -> bool:
+    word = str(row.get("word", "")).strip()
+    if not word:
+        return False
+
+    query = str(row.get("query", "")).strip()
+    reading = str(row.get("reading", "")).strip()
+    if query and is_exact_match(query, word, reading):
+        return True
+
+    return is_classified_entry(row)
+
+
+def project_output_row(row: dict) -> dict:
+    return {field: str(row.get(field, "")).strip() for field in OUTPUT_FIELDNAMES}
+
+
+def filter_and_deduplicate_rows(rows: list[dict]) -> list[dict]:
+    filtered_rows = []
+    seen = set()
+
+    for row in rows:
+        if 'query' in row:
+            keep = should_keep_entry(row)
+        else:
+            keep = bool(str(row.get("word", "")).strip())
+
+        if not keep:
+            continue
+
+        projected = project_output_row(row)
+        key = tuple(projected[field] for field in OUTPUT_FIELDNAMES)
+        if key in seen:
+            continue
+        seen.add(key)
+        filtered_rows.append(projected)
+
+    return filtered_rows
+
+
+def state_path_for_output(output_path: str) -> str:
+    return output_path + STATE_SUFFIX
+
+
+def load_existing_output(output_path: str) -> tuple[list[dict], set[str]]:
+    if not os.path.exists(output_path):
+        return [], set()
+
+    existing_rows = []
+    processed_queries = set()
+    with open(output_path, encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="|")
+        for row in reader:
+            if not row:
+                continue
+            query = str(row.get("query", "")).strip()
+            if query:
+                processed_queries.add(query)
+            existing_rows.append(row)
+    return existing_rows, processed_queries
+
+
+def load_processed_queries(output_path: str) -> set[str]:
+    state_path = state_path_for_output(output_path)
+    if not os.path.exists(state_path):
+        return set()
+
+    try:
+        with open(state_path, encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return set()
+
+    queries = payload.get("processed_queries", []) if isinstance(payload, dict) else []
+    return {str(query).strip() for query in queries if str(query).strip()}
+
+
+def save_processed_queries(output_path: str, processed_queries: set[str]) -> None:
+    state_path = state_path_for_output(output_path)
+    with open(state_path, "w", encoding="utf-8") as f:
+        json.dump({"processed_queries": sorted(processed_queries)}, f, ensure_ascii=False, indent=2)
+
+
+def write_output_rows(output_path: str, rows: list[dict]) -> None:
+    with open(output_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=OUTPUT_FIELDNAMES, delimiter="|")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(project_output_row(row))
+
+
+def refilter_output_file(output_path: str) -> int:
+    existing_rows, legacy_queries = load_existing_output(output_path)
+    filtered_rows = filter_and_deduplicate_rows(existing_rows)
+    write_output_rows(output_path, filtered_rows)
+
+    processed_queries = load_processed_queries(output_path) | legacy_queries
+    if processed_queries:
+        save_processed_queries(output_path, processed_queries)
+
+    return len(filtered_rows)
 
 
 def normalize_jlpt_level(value: str) -> str:
@@ -58,7 +266,7 @@ def normalize_jlpt_level(value: str) -> str:
     raw = (value or '').strip().upper()
     if not raw:
         return ''
-    if raw in {'N1', 'N2', 'N3', 'N4', 'N5'}:
+    if raw in VALID_JLPT_LEVELS:
         return raw
     return ''
 
@@ -98,7 +306,6 @@ def search_word(word: str) -> list[dict]:
         attrs = item.get("attributes", {})
         vocab_word = attrs.get("title", "") or attrs.get("word", "") or ""
         reading = attrs.get("kana", "") or attrs.get("reading", "") or ""
-        meaning = attrs.get("meaning", "") or ""
         jlpt_level_raw = (attrs.get("jlpt_level", "") or "").strip().upper()
         if jlpt_level_raw and not jlpt_level_raw.startswith("N"):
             jlpt_level_raw = "N" + jlpt_level_raw
@@ -110,7 +317,6 @@ def search_word(word: str) -> list[dict]:
             "query": word,
             "word": vocab_word,
             "reading": reading,
-            "meaning": meaning,
             "jlpt_level": jlpt_level,
             "jlpt_level_raw": jlpt_level_raw,
             "tags": tags_str,
@@ -122,7 +328,6 @@ def search_word(word: str) -> list[dict]:
             "query": word,
             "word": "",
             "reading": "",
-            "meaning": "",
             "jlpt_level": "",
             "jlpt_level_raw": "",
             "tags": "",
@@ -154,53 +359,55 @@ def words_from_file(path: str) -> list[str]:
 def run(words: list[str], output_path: str, delay: float = 0.3):
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
 
-    # Charger les mots déjà traités pour pouvoir reprendre
-    already_done = set()
-    if os.path.exists(output_path):
-        with open(output_path, encoding="utf-8") as f:
-            reader = csv.DictReader(f, delimiter="|")
-            for row in reader:
-                already_done.add(row.get("query", "").strip())
-        print(f"{len(already_done)} mots déjà présents dans {output_path}, ils seront ignorés.")
+    existing_rows, legacy_queries = load_existing_output(output_path)
+    already_done = load_processed_queries(output_path) | legacy_queries
+    if already_done:
+        print(f"{len(already_done)} mots déjà traités pour {output_path}, ils seront ignorés.")
 
     words_to_fetch = [w for w in words if w not in already_done]
     print(f"{len(words_to_fetch)} mots à interroger sur Bunpro.")
 
-    fieldnames = ["query", "word", "reading", "meaning", "jlpt_level", "jlpt_level_raw", "tags"]
-    write_header = not os.path.exists(output_path)
+    all_rows = list(existing_rows)
+    processed_queries = set(already_done)
 
-    with open(output_path, "a", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="|")
-        if write_header:
-            writer.writeheader()
+    for i, word in enumerate(words_to_fetch):
+        print(f"[{i+1}/{len(words_to_fetch)}] {word} ...", end=" ", flush=True)
+        entries = search_word(word)
+        all_rows.extend(entries)
+        processed_queries.add(word)
 
-        for i, word in enumerate(words_to_fetch):
-            print(f"[{i+1}/{len(words_to_fetch)}] {word} ...", end=" ", flush=True)
-            entries = search_word(word)
-            for entry in entries:
-                writer.writerow(entry)
-            f.flush()
-            found = [e for e in entries if e["word"]]
-            if found:
-                levels = [e["jlpt_level"] for e in found if e["jlpt_level"]]
-                print(f"{len(found)} résultat(s), niveaux: {', '.join(levels) if levels else 'inconnu'}")
-            else:
-                print("aucun résultat")
-            if delay > 0 and i < len(words_to_fetch) - 1:
-                time.sleep(delay)
+        kept_entries = [entry for entry in entries if should_keep_entry(entry)]
+        if kept_entries:
+            levels = [e["jlpt_level"] for e in kept_entries if e["jlpt_level"]]
+            print(f"{len(kept_entries)} résultat(s) conservé(s), niveaux: {', '.join(levels) if levels else 'inconnu'}")
+        else:
+            print("aucun résultat conservé")
+
+        if delay > 0 and i < len(words_to_fetch) - 1:
+            time.sleep(delay)
+
+    filtered_rows = filter_and_deduplicate_rows(all_rows)
+    write_output_rows(output_path, filtered_rows)
+    save_processed_queries(output_path, processed_queries)
 
     print(f"\nTerminé. Résultats enregistrés dans {output_path}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Interroge l'API Bunpro vocab pour une liste de mots japonais.")
-    source = parser.add_mutually_exclusive_group(required=True)
+    source = parser.add_mutually_exclusive_group(required=False)
     source.add_argument("--from-csv", metavar="CSV", help="CSV de test (colonne jlpt_no_katakana)")
     source.add_argument("--words", nargs="+", metavar="MOT", help="Mots à chercher en argument direct")
     source.add_argument("--words-file", metavar="FICHIER", help="Fichier texte, un mot par ligne")
     parser.add_argument("--output", default="data/bunpro-jlpt-api.csv", help="Fichier CSV de sortie (défaut: data/bunpro-jlpt-api.csv)")
     parser.add_argument("--delay", type=float, default=0.3, help="Délai en secondes entre chaque requête (défaut: 0.3)")
+    parser.add_argument("--refilter-output", action="store_true", help="Refiltre un CSV Bunpro existant avec les règles de conservation actuelles")
     args = parser.parse_args()
+
+    if args.refilter_output and not any([args.from_csv, args.words, args.words_file]):
+        kept_count = refilter_output_file(args.output)
+        print(f"{kept_count} ligne(s) conservée(s) dans {args.output}")
+        return
 
     if args.from_csv:
         words = words_from_test_csv(args.from_csv)

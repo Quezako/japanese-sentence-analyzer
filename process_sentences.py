@@ -135,6 +135,30 @@ def load_word_level_source_map(file_path, word_col='word', level_col='jlpt_level
     return mapping
 
 
+def load_word_raw_source_map(file_path, word_col='word', raw_col='jlpt_level_raw', source_name='source'):
+    """Load a generic word->(raw_level, source) map for non-standard fallback labels such as NA5."""
+    if not file_path or not os.path.exists(file_path):
+        return {}
+    try:
+        df = pd.read_csv(file_path, sep='|', dtype=str).fillna('')
+    except Exception:
+        return {}
+
+    if word_col not in df.columns or raw_col not in df.columns:
+        return {}
+
+    mapping = {}
+    for _, row in df.iterrows():
+        word = str(row.get(word_col, '')).strip()
+        raw_level = str(row.get(raw_col, '')).strip().upper()
+        if not word or not raw_level or raw_level == 'NUNCLASSIFIED':
+            continue
+        source = str(row.get(source_name, '')).strip() if source_name in df.columns else ''
+        source = source if source else source_name
+        mapping.setdefault(word, (raw_level, source))
+    return mapping
+
+
 def merge_pedagogical_maps(primary_map, fallback_map):
     """Merge fallback entries into pedagogical map, keeping the easiest level."""
     merged = dict(primary_map)
@@ -404,9 +428,12 @@ def is_kanji_or_katakana_word(text):
 
 
 def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None):
-    # Token d’une seule lettre latine (N, A, B...) = élément étranger, traité N5
-    if detail_key and re.fullmatch(r'[A-Za-z]', detail_key):
+    # Mot romaji/alphanumérique (A-Z0-9...) = élément étranger, traité N5
+    if detail_key and re.fullmatch(r'[A-Za-z0-9]+', detail_key):
         return 'N5'
+    # Katakana inconnu hors listes JLPT → tag KA
+    if detail_key and is_katakana_word(detail_key):
+        return 'KA'
     if detail_key and proper_nouns and detail_key in proper_nouns:
         return 'PN'
     if is_proper_noun_token(token):
@@ -478,6 +505,11 @@ def clean_sentence_for_analysis(sentence):
     """Remove HTML tags/entities and normalize whitespace before analysis."""
     text = html.unescape(str(sentence))
     text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(
+        r'(?<=[\u3040-\u30ff\u3400-\u9fff々〆ヶ0-9０-９])\s+(?=[\u3040-\u30ff\u3400-\u9fff々〆ヶ0-9０-９])',
+        '',
+        text,
+    )
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -546,6 +578,149 @@ def potential_to_base(word):
     return pre[:-1] + e_to_u[last_kana]
 
 
+def tokenization_repair_candidates(word):
+    """Generate lookup candidates for common clipped-token artifacts."""
+    if not word:
+        return []
+
+    form = str(word).strip()
+    if not form:
+        return []
+
+    repaired = []
+
+    if form.startswith('ょう'):
+        repaired.append('いじ' + form)
+        repaired.append('以上' + form[2:])
+        repaired.extend(['いじょう', '以上'])
+
+    if form.startswith('ゅう'):
+        repaired.append('り' + form)
+
+    if 'とはなした' in form:
+        repaired.extend(['話す', 'はなす'])
+
+    if form.startswith('ぺき'):
+        repaired.append('かん' + form)
+        repaired.append('完' + form)
+        repaired.append('完璧')
+
+    if form == 'はべる':
+        repaired.extend(['べんり', '便利'])
+
+    if form == 'だする':
+        repaired.extend(['だす', '出す'])
+
+    if form == 'むには':
+        repaired.extend(['すむには', '住むには'])
+
+    if form == 'もってこい':
+        repaired.extend(['もってくる', '持ってくる'])
+
+    if form == 'よがる':
+        repaired.extend(['つよがる', '強がる'])
+
+    return list(dict.fromkeys([x for x in repaired if x]))
+
+
+def renyoukei_to_dictionary(word):
+    """Convert a likely ren'yōkei stem (歩き, 言い, ふり...) to dictionary form."""
+    kana_map = {
+        'い': 'う',
+        'き': 'く',
+        'ぎ': 'ぐ',
+        'し': 'す',
+        'ち': 'つ',
+        'に': 'ぬ',
+        'び': 'ぶ',
+        'み': 'む',
+        'り': 'る',
+    }
+    if not word or len(word) < 2:
+        return None
+    last = word[-1]
+    if last not in kana_map:
+        return None
+    return word[:-1] + kana_map[last]
+
+
+def strip_trailing_particle(word):
+    """Strip one trailing sentence particle to recover dictionary candidate (e.g. 本当は -> 本当)."""
+    if not word or len(word) < 2:
+        return None
+    trailing_particles = {'は', 'が', 'を', 'に', 'で', 'と', 'も', 'の', 'ね', 'よ', 'か'}
+    if word[-1] in trailing_particles:
+        return word[:-1]
+    return None
+
+
+def infer_productive_suffix_level(token_text, vocab_map, pedagogical_map=None, variants_map=None):
+    """
+    Infer a JLPT level for productive formations (Vmasu+続ける/直す/始める, V+づらい, A+さ...).
+    Returns (level, source) or (None, None).
+    """
+    if not token_text:
+        return None, None
+    text = str(token_text).strip()
+    if len(text) < 2:
+        return None, None
+
+    suffix_levels = [
+        ('つづける', 'N4'),
+        ('続ける', 'N4'),
+        ('なおす', 'N3'),
+        ('直す', 'N3'),
+        ('はじめる', 'N3'),
+        ('始める', 'N3'),
+        ('づらい', 'N3'),
+        ('にくい', 'N3'),
+        ('やすい', 'N4'),
+        ('たて', 'N3'),
+        ('さ', 'N3'),
+    ]
+
+    for suffix, suffix_level in suffix_levels:
+        if not text.endswith(suffix):
+            continue
+        stem = text[:-len(suffix)]
+        if not stem:
+            continue
+
+        stem_candidates = [stem]
+        stem_stripped = strip_trailing_particle(stem)
+        if stem_stripped:
+            stem_candidates.append(stem_stripped)
+        stem_dict = renyoukei_to_dictionary(stem)
+        if stem_dict:
+            stem_candidates.append(stem_dict)
+        if stem_stripped:
+            stripped_dict = renyoukei_to_dictionary(stem_stripped)
+            if stripped_dict:
+                stem_candidates.append(stripped_dict)
+
+        stem_candidates = list(dict.fromkeys(stem_candidates))
+        if variants_map:
+            stem_candidates = expand_candidates_with_variants(stem_candidates, variants_map)
+
+        strict_level, _ = pick_best_vocab_level(vocab_map, stem_candidates)
+        peda_level = None
+        if pedagogical_map:
+            peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, stem_candidates)
+            if peda_entry:
+                peda_level = peda_entry[0]
+
+        base_level = strict_level
+        if peda_level and (not base_level or get_jlpt_level(peda_level) < get_jlpt_level(base_level)):
+            base_level = peda_level
+        if not base_level:
+            continue
+
+        combined_num = max(get_jlpt_level(base_level), get_jlpt_level(suffix_level))
+        return numeric_to_jlpt(combined_num), f'heuristic-suffix:{suffix}'
+
+    return None, None
+
+
 def candidate_forms_for_lookup(base_form, surface, reading=None):
     """Build lookup candidates including honorific-prefix and reading variants."""
     candidates = []
@@ -572,10 +747,25 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
         if len(form) >= 2 and form[0] in {'お', 'ご'}:
             candidates.append('御' + form[1:])
             candidates.append(form[1:])
+
+        stripped = strip_trailing_particle(form)
+        if stripped:
+            candidates.append(stripped)
+
+        renyoukei_dict = renyoukei_to_dictionary(form)
+        if renyoukei_dict:
+            candidates.append(renyoukei_dict)
+        if stripped:
+            stripped_dict = renyoukei_to_dictionary(stripped)
+            if stripped_dict:
+                candidates.append(stripped_dict)
+
         # Si la forme ressemble à un potentiel godan, ajouter aussi la base dict.
         non_potential = potential_to_base(form)
         if non_potential and non_potential not in candidates:
             candidates.append(non_potential)
+
+        candidates.extend(tokenization_repair_candidates(form))
     return list(dict.fromkeys(candidates))
 
 
@@ -690,6 +880,15 @@ def pick_best_pedagogical_entry(pedagogical_map, candidates):
             best_entry = entry
             best_candidate = cand
     return best_entry, best_candidate
+
+
+def pick_first_raw_fallback_entry(raw_fallback_map, candidates):
+    """Return the first matching non-standard fallback entry found among candidates."""
+    for cand in candidates:
+        entry = raw_fallback_map.get(cand)
+        if entry:
+            return entry, cand
+    return None, None
 
 
 def has_non_katakana_unknown(details_str):
@@ -858,7 +1057,7 @@ def should_skip_vocab_due_to_grammar(detail_key, vocab_level, grammar_matches, l
                 return True
     return False
 
-def find_compound_matches(tokens, vocab_map, pedagogical_map=None):
+def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_map=None):
     """
     Pre-pass: detect compound words split across consecutive tokens.
     Returns a dict: token_index -> (compound_word, strict_level, peda_entry)
@@ -940,17 +1139,21 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None):
             if pedagogical_map:
                 peda_entry, peda_word = pick_best_pedagogical_entry(pedagogical_map, candidates)
 
-            matched_word = strict_word or peda_word
+            raw_entry, raw_word = (None, None)
+            if raw_fallback_map:
+                raw_entry, raw_word = pick_first_raw_fallback_entry(raw_fallback_map, candidates)
+
+            matched_word = strict_word or peda_word or raw_word
 
             if matched_word:
-                matches[i] = (matched_word, strict_level, peda_entry, set(range(i, i + size)))
+                matches[i] = (matched_word, strict_level, peda_entry, raw_entry, set(range(i, i + size)))
                 consumed.update(range(i, i + size))
                 break  # don't try smaller size for same start index
 
     return matches, consumed
 
 
-def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, variants_map=None):
+def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, raw_fallback_map=None, variants_map=None):
     """
     Analyze vocabulary in sentence and return highest JLPT level.
     Uses janome tokenizer to handle conjugated verbs and complex words.
@@ -960,7 +1163,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
     
     try:
         tokens = list(tokenizer.tokenize(sentence))
-        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, supplemental_map)
+        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, supplemental_map, raw_fallback_map)
         consumed_by_name_span = set()
         has_katakana_proper_noun = any(
             is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
@@ -984,7 +1187,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 continue
             # Compound check must happen before any filtering
             if idx in compound_matches:
-                word, strict_level, supplemental_entry, _ = compound_matches[idx]
+                word, strict_level, supplemental_entry, raw_entry, _ = compound_matches[idx]
                 effective_level = strict_level
                 if not effective_level and supplemental_map and supplemental_entry:
                     effective_level = supplemental_entry[0]
@@ -995,6 +1198,9 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     level = get_jlpt_level(effective_level)
                     max_level = max(max_level, level)
                     details[word] = effective_level
+                elif raw_entry:
+                    raw_level, raw_source = raw_entry
+                    details[word] = f"{raw_level}@{raw_source}"
                 else:
                     details[word] = unknown_vocab_tag(
                         token,
@@ -1075,12 +1281,29 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             if not is_meaningful_token_text(detail_key):
                 continue
 
+            if not found_level:
+                inferred_level, _ = infer_productive_suffix_level(
+                    detail_key,
+                    vocab_map,
+                    pedagogical_map=supplemental_map,
+                    variants_map=variants_map,
+                )
+                if inferred_level:
+                    found_level = inferred_level
+
+            raw_entry = None
+            if not found_level and raw_fallback_map:
+                raw_entry, _ = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
+
             if found_level:
                 if should_skip_vocab_due_to_grammar(detail_key, found_level, grammar_matches, lookup_candidates):
                     continue
                 level = get_jlpt_level(found_level)
                 max_level = max(max_level, level)
                 details[detail_key] = found_level
+            elif raw_entry:
+                raw_level, raw_source = raw_entry
+                details[detail_key] = f"{raw_level}@{raw_source}"
             else:
                 details[detail_key] = unknown_vocab_tag(
                     token,
@@ -1097,7 +1320,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
     details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
     return numeric_to_jlpt(max_level), details_str
 
-def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, variants_map=None):
+def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, raw_fallback_map=None, variants_map=None):
     """
     Same as analyze_vocabulary but overrides levels from pedagogical_map.
     Returns (level, details_str) only if the result differs from the strict analysis.
@@ -1107,10 +1330,11 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
     max_strict = 0
     max_peda = 0
     details = OrderedDict()
+    used_raw_fallback = False
 
     try:
         tokens = list(tokenizer.tokenize(sentence))
-        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map)
+        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map, raw_fallback_map)
         consumed_by_name_span = set()
         has_katakana_proper_noun = any(
             is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
@@ -1134,7 +1358,7 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                 continue
             # Compound check must happen before any filtering
             if idx in compound_matches:
-                word, strict_level, peda_entry, _ = compound_matches[idx]
+                word, strict_level, peda_entry, raw_entry, _ = compound_matches[idx]
                 detail_key = word
                 if strict_level:
                     if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches):
@@ -1160,6 +1384,10 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     peda_num = get_jlpt_level(peda_level)
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
+                elif raw_entry:
+                    raw_level, raw_source = raw_entry
+                    details[detail_key] = f"{raw_level}@{raw_source}"
+                    used_raw_fallback = True
                 else:
                     details[detail_key] = unknown_vocab_tag(
                         token,
@@ -1242,6 +1470,9 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
 
             # Check pedagogical override (for base_form or surface)
             peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, lookup_candidates)
+            raw_entry = None
+            if not strict_level and not peda_entry and raw_fallback_map:
+                raw_entry, _ = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
 
             if strict_level:
                 if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches, lookup_candidates):
@@ -1272,15 +1503,32 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     max_peda = max(max_peda, peda_num)
                     details[detail_key] = f"{peda_level}@{peda_source}"
                 else:
-                    details[detail_key] = unknown_vocab_tag(
-                        token,
-                        detail_key=detail_key,
-                        proper_nouns=proper_nouns,
-                        common_words=common_words,
-                        candidates=lookup_candidates,
-                        prev_token=prev_token,
-                        next_token=next_token,
+                    inferred_level, inferred_source = infer_productive_suffix_level(
+                        detail_key,
+                        vocab_map,
+                        pedagogical_map=pedagogical_map,
+                        variants_map=variants_map,
                     )
+                    if inferred_level:
+                        if should_skip_vocab_due_to_grammar(detail_key, inferred_level, grammar_matches, lookup_candidates):
+                            continue
+                        inferred_num = get_jlpt_level(inferred_level)
+                        max_peda = max(max_peda, inferred_num)
+                        details[detail_key] = f"{inferred_level}@{inferred_source}"
+                    elif raw_entry:
+                        raw_level, raw_source = raw_entry
+                        details[detail_key] = f"{raw_level}@{raw_source}"
+                        used_raw_fallback = True
+                    else:
+                        details[detail_key] = unknown_vocab_tag(
+                            token,
+                            detail_key=detail_key,
+                            proper_nouns=proper_nouns,
+                            common_words=common_words,
+                            candidates=lookup_candidates,
+                            prev_token=prev_token,
+                            next_token=next_token,
+                        )
     except Exception as e:
         print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
 
@@ -1288,6 +1536,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
 
     if max_peda == max_strict:
         # No difference: return same level as strict, no details needed
+        if used_raw_fallback:
+            return numeric_to_jlpt(max_strict), details_str
         return numeric_to_jlpt(max_strict), '-'
 
     return numeric_to_jlpt(max_peda), details_str
@@ -1372,20 +1622,20 @@ def process_sentences(
     )
     pedagogical_map = merge_pedagogical_maps(pedagogical_map, bunpro_fallback)
 
-    bunpro_api_by_query = load_word_level_source_map(
-        bunpro_api_file,
-        word_col='query',
-        level_col='jlpt_level',
-        source_name='bunpro-api',
-    )
     bunpro_api_by_word = load_word_level_source_map(
         bunpro_api_file,
         word_col='word',
         level_col='jlpt_level',
         source_name='bunpro-api',
     )
-    bunpro_api_fallback = merge_pedagogical_maps(bunpro_api_by_query, bunpro_api_by_word)
+    bunpro_api_fallback = bunpro_api_by_word
     pedagogical_map = merge_pedagogical_maps(pedagogical_map, bunpro_api_fallback)
+    bunpro_api_raw_fallback = load_word_raw_source_map(
+        bunpro_api_file,
+        word_col='word',
+        raw_col='jlpt_level_raw',
+        source_name='bunpro-api-raw',
+    )
 
     open_anki_fallback = load_open_anki_jlpt(open_anki_folder)
     pedagogical_map = merge_pedagogical_maps(pedagogical_map, open_anki_fallback)
@@ -1397,6 +1647,7 @@ def process_sentences(
     print(f"Loaded pedagogical overrides: {len(pedagogical_map)}")
     print(f"Loaded Bunpro fallback entries: {len(bunpro_fallback)}")
     print(f"Loaded Bunpro API fallback entries: {len(bunpro_api_fallback)}")
+    print(f"Loaded Bunpro API raw fallback entries: {len(bunpro_api_raw_fallback)}")
     print(f"Loaded Open-Anki-JLPT entries: {len(open_anki_fallback)}")
     print(f"Loaded proper nouns: {len(proper_nouns)}")
     print(f"Loaded common words (CO): {len(common_words)}")
@@ -1467,6 +1718,7 @@ def process_sentences(
             proper_nouns=proper_nouns,
             common_words=common_words,
             supplemental_map=pedagogical_map,
+            raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
         )
         peda_level, peda_detail = analyze_vocab_pedagogical(
@@ -1476,6 +1728,7 @@ def process_sentences(
             grammar_matches=grammar_matches,
             proper_nouns=proper_nouns,
             common_words=common_words,
+            raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
         )
         no_kata_level, _ = analyze_vocab_pedagogical(
@@ -1486,6 +1739,7 @@ def process_sentences(
             grammar_matches=grammar_matches,
             proper_nouns=proper_nouns,
             common_words=common_words,
+            raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
         )
 
