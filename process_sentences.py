@@ -427,9 +427,9 @@ def is_kanji_or_katakana_word(text):
     return bool(re.fullmatch(r'[\u4e00-\u9fff々\u30A0-\u30FF\uFF66-\uFF9FA-Za-zＡ-Ｚａ-ｚ]+', text))
 
 
-def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None):
-    # Mot romaji/alphanumérique (A-Z0-9...) = élément étranger, traité N5
-    if detail_key and re.fullmatch(r'[A-Za-z0-9]+', detail_key):
+def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=None, candidates=None, prev_token=None, next_token=None, bunpro_raw_map=None):
+    # Mot romaji/alphanumérique ASCII ou fullwidth (ＡＪＬＰＴ, ＬＤＫ, etc.) → N5
+    if detail_key and re.fullmatch(r'[A-Za-z0-9Ａ-Ｚａ-ｚ０-９]+', detail_key):
         return 'N5'
     # Katakana inconnu hors listes JLPT → tag KA
     if detail_key and is_katakana_word(detail_key):
@@ -469,6 +469,11 @@ def unknown_vocab_tag(token, detail_key=None, proper_nouns=None, common_words=No
         for value in candidate_values:
             if value in common_words:
                 return 'CO'
+    # Mot présent dans Bunpro mais sans niveau JLPT (NUNCLASSIFIED) → UNC
+    if bunpro_raw_map and candidate_values:
+        for value in candidate_values:
+            if value in bunpro_raw_map:
+                return 'UNC'
     return '?'
 
 
@@ -514,6 +519,188 @@ def clean_sentence_for_analysis(sentence):
     return text
 
 
+def build_hiragana_to_kanji_map(vocab_map, supplemental_map=None):
+    """Build a map: hiragana_reading -> kanji_form for all known multi-char kanji words.
+    Used to post-normalize hiragana tokens produced by Janome tokenization.
+    Only generates entries where the hiragana reading is pure hiragana (no kanji)."""
+    hira_map = {}
+
+    def _kata_to_hira(text):
+        return ''.join(chr(ord(c) - 0x60) if 0x30A1 <= ord(c) <= 0x30F6 else c for c in text)
+
+    # Collect all kanji words from vocab maps
+    kanji_words = {}
+    for word in vocab_map:
+        if re.search(r'[\u4e00-\u9fff]', word) and len(word) >= 2:
+            kanji_words[word] = vocab_map[word]
+    if supplemental_map:
+        for word in supplemental_map:
+            if re.search(r'[\u4e00-\u9fff]', word) and len(word) >= 2 and word not in kanji_words:
+                entry = supplemental_map[word]
+                kanji_words[word] = entry[0] if isinstance(entry, tuple) else entry
+
+    for word in kanji_words:
+        try:
+            toks = list(tokenizer.tokenize(word))
+            reading = ''.join(
+                _kata_to_hira(getattr(tok, 'reading', '') or tok.surface)
+                if (getattr(tok, 'reading', '') and getattr(tok, 'reading', '') != '*')
+                else tok.surface
+                for tok in toks
+            )
+            # Only map if reading is pure hiragana and differs from word (which has kanji)
+            if reading and reading != word and re.fullmatch(r'[ぁ-ゖー]+', reading) and len(reading) >= 2:
+                # Prefer shorter (simpler) kanji form if collision
+                if reading not in hira_map or len(word) < len(hira_map[reading]):
+                    hira_map[reading] = word
+        except Exception:
+            pass
+
+    return hira_map
+
+
+def normalize_hiragana_in_sentence(sentence, hira_map=None):
+    """No longer used for whole-sentence substitution. See enrich_candidates_with_hira_map."""
+    return sentence
+
+
+def candidate_to_hiragana_key(text):
+    """Return the full-hiragana reading key for a candidate when Janome can derive it."""
+    if not text:
+        return ''
+    candidate = str(text).strip()
+    if not candidate:
+        return ''
+    if re.fullmatch(r'[ぁ-ゖー]+', candidate):
+        return candidate
+
+    try:
+        toks = list(tokenizer.tokenize(candidate))
+    except Exception:
+        return ''
+
+    parts = []
+    for tok in toks:
+        reading = getattr(tok, 'reading', '') if hasattr(tok, 'reading') else ''
+        surface = tok.surface if hasattr(tok, 'surface') else ''
+        if reading and reading != '*':
+            parts.append(katakana_to_hiragana(reading))
+        elif surface:
+            parts.append(surface)
+
+    reading_key = ''.join(parts)
+    if reading_key and re.fullmatch(r'[ぁ-ゖー]+', reading_key):
+        return reading_key
+    return ''
+
+
+def enrich_candidates_with_hira_map(candidates, hira_map):
+    """Add canonical kanji forms for hiragana and mixed-form candidates via reading lookup."""
+    if not hira_map or not candidates:
+        return candidates
+    extra = []
+    for cand in candidates:
+        reading_key = candidate_to_hiragana_key(cand)
+        if reading_key and reading_key in hira_map:
+            kanji_form = hira_map[reading_key]
+            if kanji_form not in candidates:
+                extra.append(kanji_form)
+    return candidates + extra if extra else candidates
+
+
+def get_small_kana_prefix_candidates(tokens, idx, hira_map, max_prefix_len=8):
+    """When token[idx+1] starts with a small kana (artifact of mis-segmentation),
+    try concatenating token[idx].surface with the beginning of token[idx+1].surface
+    to reconstruct the original multi-char word, then look it up in hira_map."""
+    if not hira_map or idx < 0 or idx >= len(tokens) - 1:
+        return []
+    current_surface = tokens[idx].surface if hasattr(tokens[idx], 'surface') else ''
+    if not re.fullmatch(r'[ぁ-ゖー]+', current_surface):
+        return []
+    next_surface = tokens[idx + 1].surface if hasattr(tokens[idx + 1], 'surface') else ''
+    if not next_surface or next_surface[0] not in SMALL_KANA:
+        return []
+    # Try current + increasing prefix of next_surface
+    candidates = []
+    for end in range(1, min(len(next_surface) + 1, max_prefix_len + 1)):
+        merged = current_surface + next_surface[:end]
+        if merged in hira_map:
+            candidates.append(hira_map[merged])
+            candidates.append(merged)
+    return list(dict.fromkeys(candidates))
+
+
+def get_prev_token_join_candidates(tokens, idx, max_prefix_len=8):
+    """Join the previous token with the current kana token to recover split mixed forms."""
+    if idx <= 0 or idx >= len(tokens):
+        return []
+
+    prev_surface = tokens[idx - 1].surface if hasattr(tokens[idx - 1], 'surface') else ''
+    current_surface = tokens[idx].surface if hasattr(tokens[idx], 'surface') else ''
+    current_base = tokens[idx].base_form if hasattr(tokens[idx], 'base_form') else current_surface
+
+    if not prev_surface or not current_surface:
+        return []
+    if not re.search(r'[\u3040-\u30ff\u3400-\u9fff々〆ヶ]', prev_surface):
+        return []
+    if not re.fullmatch(r'[ぁ-ゖー]+', current_surface):
+        return []
+
+    candidates = [prev_surface + current_surface]
+    if current_base and current_base != '*' and re.fullmatch(r'[ぁ-ゖー]+', current_base):
+        candidates.append(prev_surface + current_base)
+
+    for end in range(1, min(len(current_surface), max_prefix_len) + 1):
+        candidates.append(prev_surface + current_surface[:end])
+    if current_base and current_base != '*':
+        for end in range(1, min(len(current_base), max_prefix_len) + 1):
+            candidates.append(prev_surface + current_base[:end])
+
+    expanded = []
+    for cand in candidates:
+        expanded.append(cand)
+        non_potential = potential_to_base(cand)
+        if non_potential:
+            expanded.append(non_potential)
+
+    return list(dict.fromkeys([cand for cand in expanded if cand]))
+
+
+def get_prev_honorific_residue_candidates(tokens, idx):
+    """Recover compounds like お釣り / お腹 when the previous consumed token ends with お/ご."""
+    if idx <= 0 or idx >= len(tokens):
+        return []
+
+    prev_surface = tokens[idx - 1].surface if hasattr(tokens[idx - 1], 'surface') else ''
+    current_surface = tokens[idx].surface if hasattr(tokens[idx], 'surface') else ''
+    current_base = tokens[idx].base_form if hasattr(tokens[idx], 'base_form') else current_surface
+
+    if not prev_surface or prev_surface[-1] not in {'お', 'ご'}:
+        return []
+    if not current_surface or not is_meaningful_token_text(current_surface):
+        return []
+
+    candidates = [prev_surface[-1] + current_surface]
+    if current_base and current_base != '*':
+        candidates.append(prev_surface[-1] + current_base)
+    return list(dict.fromkeys([cand for cand in candidates if cand]))
+
+
+def expand_compound_lookup_candidates(candidates, variants_map=None, hira_map=None):
+    """Apply lightweight normalization helpers to compound lookup candidates."""
+    expanded = list(dict.fromkeys([cand for cand in candidates if cand]))
+    extra = []
+    for cand in expanded:
+        non_potential = potential_to_base(cand)
+        if non_potential:
+            extra.append(non_potential)
+    expanded.extend(extra)
+    expanded = list(dict.fromkeys(expanded))
+    expanded = expand_candidates_with_variants(expanded, variants_map)
+    expanded = enrich_candidates_with_hira_map(expanded, hira_map)
+    return expanded
+
+
 def is_meaningful_token_text(text):
     """Keep only tokens containing Japanese or alphanumeric characters."""
     if not text:
@@ -532,6 +719,35 @@ def is_hiragana_word(text):
     if not text:
         return False
     return bool(re.fullmatch(r'[ぁ-ゖー]+', text))
+
+
+def choose_preferred_detail_key(original_key, matched_key):
+    """Prefer the matched key only when it is clearly more informative than the original token form."""
+    if not matched_key:
+        return original_key
+    if not original_key:
+        return matched_key
+
+    original = str(original_key).strip()
+    matched = str(matched_key).strip()
+    if not matched:
+        return original
+    if matched == original:
+        return matched
+
+    original_kanji = len(re.findall(r'[\u3400-\u9fff々〆ヶ]', original))
+    matched_kanji = len(re.findall(r'[\u3400-\u9fff々〆ヶ]', matched))
+
+    if matched_kanji > original_kanji:
+        return matched
+    if matched_kanji > 0 and original_kanji == 0:
+        return matched
+    if matched_kanji > 0 and matched[0] in {'お', 'ご'} and len(matched) >= len(original):
+        return matched
+    if matched_kanji > 0 and any(p in matched for p in ('を', 'に', 'が', 'の')):
+        return matched
+
+    return original
 
 
 def katakana_to_hiragana(text):
@@ -747,6 +963,9 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
         if len(form) >= 2 and form[0] in {'お', 'ご'}:
             candidates.append('御' + form[1:])
             candidates.append(form[1:])
+            candidates.append(form[1:] + 'る')
+            candidates.append(form + 'する')
+            candidates.append(form[1:] + 'する')
 
         stripped = strip_trailing_particle(form)
         if stripped:
@@ -891,6 +1110,44 @@ def pick_first_raw_fallback_entry(raw_fallback_map, candidates):
     return None, None
 
 
+def get_raw_level_priority(raw_label):
+    """Parse numeric priority from Bunpro raw labels like NA4, NA10, NE1.
+    Higher number = more advanced in Bunpro curriculum (harder, further from JLPT)."""
+    match = re.match(r'^N[AE](\d+)$', str(raw_label).strip().upper())
+    return int(match.group(1)) if match else 0
+
+
+def is_raw_level_harder(new_label, current_label):
+    """Return True if new_label is harder than current_label (or current is None)."""
+    if current_label is None:
+        return True
+    return get_raw_level_priority(new_label) > get_raw_level_priority(current_label)
+
+
+def diff_details_str(peda_str, strict_str):
+    """Return only the entries from peda_str that differ from strict_str.
+    Entries identical in both are removed. Returns '-' if nothing differs."""
+    if not peda_str or peda_str == '-':
+        return '-'
+    if not strict_str or strict_str == '-':
+        return peda_str
+    strict_dict = {}
+    for item in str(strict_str).split(','):
+        item = item.strip()
+        if ':' in item:
+            k, v = item.split(':', 1)
+            strict_dict[k.strip()] = v.strip()
+    diff_parts = []
+    for item in str(peda_str).split(','):
+        item = item.strip()
+        if ':' in item:
+            k, v = item.split(':', 1)
+            k = k.strip(); v = v.strip()
+            if strict_dict.get(k) != v:
+                diff_parts.append(f"{k}:{v}")
+    return ','.join(diff_parts) if diff_parts else '-'
+
+
 def has_non_katakana_unknown(details_str):
     """Return True if details contain an unknown token (?:) that is not katakana."""
     if not details_str or details_str == '-':
@@ -912,6 +1169,9 @@ def has_non_katakana_unknown(details_str):
     return False
 
 
+SMALL_KANA = frozenset('ぁぃぅぇぉゃゅょっ')
+
+
 def is_tokenization_artifact(token):
     """Detect Janome artifacts like いつ -> い(いる)+つ and ignore them."""
     surface = token.surface if hasattr(token, 'surface') else ''
@@ -919,9 +1179,17 @@ def is_tokenization_artifact(token):
     pos = token.part_of_speech.split(',')
     major = pos[0] if len(pos) > 0 else ''
 
+    if not surface:
+        return False
+
+    # Surface starting with a small kana is always a mis-segmentation artifact.
+    # (e.g. ちゅうしん split as ちゅうし+ん, then ちゅうし as ちゅうし(ちゅうする)+ん → ゅうして residue)
+    if surface[0] in SMALL_KANA:
+        return True
+
     if major != '動詞':
         return False
-    if not surface or not base_form:
+    if not base_form:
         return False
 
     # Single hiragana token analyzed as an independent verb is usually noise,
@@ -1057,16 +1325,207 @@ def should_skip_vocab_due_to_grammar(detail_key, vocab_level, grammar_matches, l
                 return True
     return False
 
-def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_map=None):
+
+def grammar_pattern_core(pattern):
+    """Extract a comparable core from grammar patterns like Vがたい, べくもない, NはN."""
+    if not pattern:
+        return ''
+    text = str(pattern).strip()
+    text = re.sub(r'[A-Za-zＡ-Ｚａ-ｚ]', '', text)
+    text = re.sub(r'[〜~＋+→・*／/\s「」『』（）()\[\]<>:：.,，]', '', text)
+    return text
+
+
+def should_skip_unknown_due_to_grammar(detail_key, grammar_matches, lookup_candidates=None, next_token=None):
+    """Suppress unknown vocab fragments when a matched grammar pattern already explains them."""
+    if not detail_key or not grammar_matches:
+        return False
+
+    terms = {str(detail_key).strip()}
+    if lookup_candidates:
+        terms.update(str(candidate).strip() for candidate in lookup_candidates if str(candidate).strip())
+    if next_token is not None and hasattr(next_token, 'surface'):
+        next_surface = str(next_token.surface).strip()
+        if next_surface:
+            terms.update({term + next_surface for term in list(terms) if term})
+
+    comparable_terms = set()
+    for term in terms:
+        if not term or len(term) < 2:
+            continue
+        comparable_terms.add(term)
+        for start in range(1, len(term) - 1):
+            suffix = term[start:]
+            if len(suffix) >= 2:
+                comparable_terms.add(suffix)
+
+    for pattern, _grammar_level in grammar_matches:
+        core = grammar_pattern_core(pattern)
+        if not core or len(core) < 2:
+            continue
+        for term in comparable_terms:
+            if term == core or term in core or core in term:
+                return True
+    return False
+
+
+def find_proper_noun_spans(tokens, proper_nouns, max_size=6):
+    """Find exact multi-token proper noun spans like 鬼滅の刃 or 牧瀬紅莉栖."""
+    if not tokens or not proper_nouns:
+        return {}, set()
+
+    matches = {}
+    consumed = set()
+    n = len(tokens)
+
+    for size in range(max_size, 1, -1):
+        for i in range(n - size + 1):
+            if any(idx in consumed for idx in range(i, i + size)):
+                continue
+            group = tokens[i:i + size]
+            blocked = False
+            has_name_like_token = False
+            for token in group:
+                surface = token.surface if hasattr(token, 'surface') else ''
+                pos = token.part_of_speech.split(',')
+                major = pos[0] if len(pos) > 0 else ''
+                if not surface or major == '記号':
+                    blocked = True
+                    break
+                if is_proper_noun_token(token) or re.search(r'[\u3400-\u9fff々\u30A0-\u30FF\uFF66-\uFF9F]', surface):
+                    has_name_like_token = True
+            if blocked:
+                continue
+
+            surface_join = ''.join(token.surface for token in group)
+            if has_name_like_token and surface_join in proper_nouns:
+                indices = set(range(i, i + size))
+                matches[i] = (surface_join, indices)
+                consumed.update(indices)
+
+    return matches, consumed
+
+def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_map=None, variants_map=None, hira_map=None):
     """
     Pre-pass: detect compound words split across consecutive tokens.
     Returns a dict: token_index -> (compound_word, strict_level, peda_entry)
     for the FIRST token of each matched compound. Consumed indices are also returned.
     Tries bigrammes and trigrammes (surface and base_form combinations).
+    Also tries hiragana surface concatenations against hira_map (kanji reading map).
     """
     matches = {}   # first_index -> (word, strict_level, peda_entry)
     consumed = set()
     n = len(tokens)
+
+    # Extra pass: try hiragana-surface concatenations that match hira_map
+    # This handles cases like ちゅうしん → 中心 where Janome splits into ちゅうし + ん
+    # Also handles cases like はいしゃく → 拝借 where token[0]=はいし, token[1]=ゃく...
+    if hira_map:
+        for size in (5, 4, 3, 2):
+            for i in range(n - size + 1):
+                if i in consumed:
+                    continue
+                group = tokens[i:i + size]
+                # Only consider groups where all tokens have hiragana surfaces
+                all_hira = all(
+                    bool(re.fullmatch(r'[ぁ-ゖー]+', t.surface if hasattr(t, 'surface') else ''))
+                    for t in group
+                )
+                if not all_hira:
+                    continue
+                surfaces = ''.join(t.surface for t in group)
+                # For groups containing long artifact tokens (starting with small kana),
+                # also try using only the prefix of that artifact token that forms a known word
+                # Try longer prefixes first (greedy match = prefer longer words)
+                candidate_keys = [surfaces]
+                for j, tok in enumerate(group):
+                    tok_surf = tok.surface if hasattr(tok, 'surface') else ''
+                    if tok_surf and tok_surf[0] in SMALL_KANA and j > 0:
+                        # Case A: surfaces of tokens[i..i+j-1] + prefix of tok_surf (longest first)
+                        prefix_base = ''.join(t.surface for t in group[:j])
+                        for end in range(min(len(tok_surf), 8), 0, -1):
+                            candidate_keys.append(prefix_base + tok_surf[:end])
+                        # Case B: suffix of token[j-1] + prefix of tok_surf
+                        # Handles: e.g. 'らち'+'ゅうこく' → try 'ち'+'ゅうこく'='ちゅうこく'
+                        prev_surf = group[j - 1].surface if hasattr(group[j - 1], 'surface') else ''
+                        for suf_start in range(1, len(prev_surf)):
+                            suffix_of_prev = prev_surf[suf_start:]
+                            for end in range(min(len(tok_surf), 8), 0, -1):
+                                candidate_keys.append(suffix_of_prev + tok_surf[:end])
+                # Deduplicate preserving order
+                seen_k = set()
+                candidate_keys = [k for k in candidate_keys if k not in seen_k and not seen_k.add(k)]
+                found_key = None
+                for cand in candidate_keys:
+                    if cand in hira_map:
+                        found_key = cand
+                        break
+                if not found_key:
+                    continue
+                kanji_form = hira_map[found_key]
+                strict_level, _ = pick_best_vocab_level(vocab_map, [kanji_form, found_key])
+                peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, [kanji_form, found_key]) if pedagogical_map else (None, None)
+                raw_entry, _ = pick_first_raw_fallback_entry(raw_fallback_map, [kanji_form, found_key]) if raw_fallback_map else (None, None)
+                if strict_level or peda_entry or raw_entry:
+                    matched_word = kanji_form
+                    matches[i] = (matched_word, strict_level, peda_entry, raw_entry, set(range(i, i + size)))
+                    consumed.update(range(i, i + size))
+
+    # Exact phrase pass: allow particles/auxiliaries when the joined surface/base
+    # matches a known expression (e.g. 無下に, 駄々をこねる, 手が離せない, 逆鱗に触れる).
+    for size in (5, 4, 3, 2):
+        for i in range(n - size + 1):
+            if i in consumed:
+                continue
+            group = tokens[i:i + size]
+
+            surfaces = ''.join(t.surface for t in group)
+            bases = ''.join(
+                (t.base_form if hasattr(t, 'base_form') and t.base_form and t.base_form != '*' else t.surface)
+                for t in group
+            )
+            last = group[-1]
+            last_base = last.base_form if hasattr(last, 'base_form') and last.base_form and last.base_form != '*' else last.surface
+
+            candidates = [surfaces, bases]
+            if size >= 2:
+                candidates.append(''.join(t.surface for t in group[:-1]) + last_base)
+
+            last_surface = last.surface if hasattr(last, 'surface') else ''
+            prefix_base = ''.join(t.surface for t in group[:-1])
+            for end in range(1, min(len(last_surface), 8) + 1):
+                candidates.append(prefix_base + last_surface[:end])
+
+            for j in range(1, len(group)):
+                prev_surface = group[j - 1].surface if hasattr(group[j - 1], 'surface') else ''
+                if not prev_surface:
+                    continue
+                earlier_prefix = ''.join(t.surface for t in group[:j - 1])
+                first_rest = group[j].surface if hasattr(group[j], 'surface') else ''
+                tail_rest = ''.join(t.surface for t in group[j + 1:])
+                rest_surface = first_rest + tail_rest
+                if not rest_surface:
+                    continue
+                for suf_start in range(1, len(prev_surface)):
+                    suffix = prev_surface[suf_start:]
+                    candidates.append(earlier_prefix + suffix + rest_surface)
+                    for end in range(1, min(len(first_rest), 8) + 1):
+                        candidates.append(earlier_prefix + suffix + first_rest[:end] + tail_rest)
+
+            candidates = expand_compound_lookup_candidates(candidates, variants_map=None, hira_map=hira_map)
+
+            strict_level, strict_word = pick_best_vocab_level(vocab_map, candidates)
+            peda_entry, peda_word = (None, None)
+            if pedagogical_map:
+                peda_entry, peda_word = pick_best_pedagogical_entry(pedagogical_map, candidates)
+            raw_entry, raw_word = (None, None)
+            if raw_fallback_map:
+                raw_entry, raw_word = pick_first_raw_fallback_entry(raw_fallback_map, candidates)
+
+            matched_word = strict_word or peda_word or raw_word
+            if matched_word and len(str(matched_word)) >= 2 and re.search(r'[\u3400-\u9fff々〆ヶ]', str(matched_word)):
+                matches[i] = (matched_word, strict_level, peda_entry, raw_entry, set(range(i, i + size)))
+                consumed.update(range(i, i + size))
 
     for i in range(n):
         if i in consumed:
@@ -1134,6 +1593,8 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
                     candidates.append('御' + c[1:])
                     candidates.append(c[1:])
 
+            candidates = expand_compound_lookup_candidates(candidates, variants_map=variants_map, hira_map=hira_map)
+
             strict_level, strict_word = pick_best_vocab_level(vocab_map, candidates)
             peda_entry, peda_word = (None, None)
             if pedagogical_map:
@@ -1153,17 +1614,19 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
     return matches, consumed
 
 
-def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, raw_fallback_map=None, variants_map=None):
+def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=None, common_words=None, supplemental_map=None, raw_fallback_map=None, variants_map=None, bunpro_raw_map=None, hira_map=None):
     """
     Analyze vocabulary in sentence and return highest JLPT level.
     Uses janome tokenizer to handle conjugated verbs and complex words.
     """
     max_level = 0
+    raw_max_label = None
     details = OrderedDict()
     
     try:
         tokens = list(tokenizer.tokenize(sentence))
-        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, supplemental_map, raw_fallback_map)
+        proper_noun_spans, consumed_by_proper_noun = find_proper_noun_spans(tokens, proper_nouns)
+        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, supplemental_map, raw_fallback_map, variants_map=variants_map, hira_map=hira_map)
         consumed_by_name_span = set()
         has_katakana_proper_noun = any(
             is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
@@ -1172,6 +1635,11 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
 
         for idx, token in enumerate(tokens):
             if idx in consumed_by_name_span:
+                continue
+            if idx in proper_noun_spans:
+                word, span = proper_noun_spans[idx]
+                details[word] = 'PN'
+                consumed_by_name_span.update(span)
                 continue
             prev_token = tokens[idx - 1] if idx > 0 else None
             next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
@@ -1201,6 +1669,8 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                 elif raw_entry:
                     raw_level, raw_source = raw_entry
                     details[word] = f"{raw_level}@{raw_source}"
+                    if is_raw_level_harder(raw_level, raw_max_label):
+                        raw_max_label = raw_level
                 else:
                     details[word] = unknown_vocab_tag(
                         token,
@@ -1209,10 +1679,13 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                         common_words=common_words,
                         prev_token=prev_token,
                         next_token=next_token,
+                    bunpro_raw_map=bunpro_raw_map,
                     )
                 continue
 
             if idx in consumed_by_compound:
+                continue
+            if idx in consumed_by_proper_noun:
                 continue
 
             if not should_count_for_vocab(token):
@@ -1266,14 +1739,35 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
 
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
             lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
+            lookup_candidates.extend(get_small_kana_prefix_candidates(tokens, idx, hira_map))
+            lookup_candidates.extend(get_prev_token_join_candidates(tokens, idx))
+            honorific_residue_candidates = get_prev_honorific_residue_candidates(tokens, idx)
+            lookup_candidates.extend(honorific_residue_candidates)
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
-            found_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
+            lookup_candidates = enrich_candidates_with_hira_map(lookup_candidates, hira_map)
+            found_level, found_candidate = pick_best_vocab_level(vocab_map, lookup_candidates)
+
+            supplemental_entry = None
+            supplemental_candidate = None
+
+            if honorific_residue_candidates:
+                honorific_strict_level, honorific_strict_candidate = pick_best_vocab_level(vocab_map, honorific_residue_candidates)
+                if honorific_strict_level:
+                    found_level = honorific_strict_level
+                    found_candidate = honorific_strict_candidate
 
             if not found_level and supplemental_map:
-                supplemental_entry, _ = pick_best_pedagogical_entry(supplemental_map, lookup_candidates)
+                supplemental_entry, supplemental_candidate = pick_best_pedagogical_entry(supplemental_map, lookup_candidates)
                 if supplemental_entry:
                     found_level = supplemental_entry[0]
+            if honorific_residue_candidates and supplemental_map:
+                honorific_supp_entry, honorific_supp_candidate = pick_best_pedagogical_entry(supplemental_map, honorific_residue_candidates)
+                if honorific_supp_entry:
+                    supplemental_entry = honorific_supp_entry
+                    supplemental_candidate = honorific_supp_candidate
+                    found_level = honorific_supp_entry[0]
+                    found_candidate = None
 
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
@@ -1293,7 +1787,16 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
 
             raw_entry = None
             if not found_level and raw_fallback_map:
-                raw_entry, _ = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
+                raw_entry, raw_candidate = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
+            else:
+                raw_candidate = None
+
+            if found_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, found_candidate)
+            elif supplemental_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, supplemental_candidate)
+            elif raw_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
 
             if found_level:
                 if should_skip_vocab_due_to_grammar(detail_key, found_level, grammar_matches, lookup_candidates):
@@ -1304,7 +1807,11 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             elif raw_entry:
                 raw_level, raw_source = raw_entry
                 details[detail_key] = f"{raw_level}@{raw_source}"
+                if is_raw_level_harder(raw_level, raw_max_label):
+                    raw_max_label = raw_level
             else:
+                if should_skip_unknown_due_to_grammar(detail_key, grammar_matches, lookup_candidates=lookup_candidates, next_token=next_token):
+                    continue
                 details[detail_key] = unknown_vocab_tag(
                     token,
                     detail_key=detail_key,
@@ -1313,14 +1820,17 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     candidates=lookup_candidates,
                     prev_token=prev_token,
                     next_token=next_token,
+                    bunpro_raw_map=bunpro_raw_map,
                 )
     except Exception as e:
         print(f"Error analyzing vocabulary in '{sentence}': {e}")
 
     details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
+    if raw_max_label is not None:
+        return raw_max_label, details_str
     return numeric_to_jlpt(max_level), details_str
 
-def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, raw_fallback_map=None, variants_map=None):
+def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katakana=False, grammar_matches=None, proper_nouns=None, common_words=None, raw_fallback_map=None, variants_map=None, bunpro_raw_map=None, hira_map=None):
     """
     Same as analyze_vocabulary but overrides levels from pedagogical_map.
     Returns (level, details_str) only if the result differs from the strict analysis.
@@ -1329,12 +1839,14 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
     """
     max_strict = 0
     max_peda = 0
+    raw_max_label = None
     details = OrderedDict()
     used_raw_fallback = False
 
     try:
         tokens = list(tokenizer.tokenize(sentence))
-        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map, raw_fallback_map)
+        proper_noun_spans, consumed_by_proper_noun = find_proper_noun_spans(tokens, proper_nouns)
+        compound_matches, consumed_by_compound = find_compound_matches(tokens, vocab_map, pedagogical_map, raw_fallback_map, variants_map=variants_map, hira_map=hira_map)
         consumed_by_name_span = set()
         has_katakana_proper_noun = any(
             is_katakana_word(tok.surface if hasattr(tok, 'surface') else '') and is_proper_noun_token(tok)
@@ -1343,6 +1855,11 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
 
         for idx, token in enumerate(tokens):
             if idx in consumed_by_name_span:
+                continue
+            if idx in proper_noun_spans:
+                word, span = proper_noun_spans[idx]
+                details[word] = 'PN'
+                consumed_by_name_span.update(span)
                 continue
             prev_token = tokens[idx - 1] if idx > 0 else None
             next_token = tokens[idx + 1] if idx < len(tokens) - 1 else None
@@ -1388,6 +1905,8 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     raw_level, raw_source = raw_entry
                     details[detail_key] = f"{raw_level}@{raw_source}"
                     used_raw_fallback = True
+                    if is_raw_level_harder(raw_level, raw_max_label):
+                        raw_max_label = raw_level
                 else:
                     details[detail_key] = unknown_vocab_tag(
                         token,
@@ -1396,10 +1915,13 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         common_words=common_words,
                         prev_token=prev_token,
                         next_token=next_token,
+                    bunpro_raw_map=bunpro_raw_map,
                     )
                 continue
 
             if idx in consumed_by_compound:
+                continue
+            if idx in consumed_by_proper_noun:
                 continue
 
             if not should_count_for_vocab(token):
@@ -1458,9 +1980,20 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
 
             lookup_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
             lookup_candidates.extend(infer_purpose_stem_candidates(tokens, idx))
+            lookup_candidates.extend(get_small_kana_prefix_candidates(tokens, idx, hira_map))
+            lookup_candidates.extend(get_prev_token_join_candidates(tokens, idx))
+            honorific_residue_candidates = get_prev_honorific_residue_candidates(tokens, idx)
+            lookup_candidates.extend(honorific_residue_candidates)
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
-            strict_level, _ = pick_best_vocab_level(vocab_map, lookup_candidates)
+            lookup_candidates = enrich_candidates_with_hira_map(lookup_candidates, hira_map)
+            strict_level, strict_candidate = pick_best_vocab_level(vocab_map, lookup_candidates)
+
+            if honorific_residue_candidates:
+                honorific_strict_level, honorific_strict_candidate = pick_best_vocab_level(vocab_map, honorific_residue_candidates)
+                if honorific_strict_level:
+                    strict_level = honorific_strict_level
+                    strict_candidate = honorific_strict_candidate
 
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
@@ -1469,10 +2002,26 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                 continue
 
             # Check pedagogical override (for base_form or surface)
-            peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, lookup_candidates)
+            peda_entry, peda_candidate = pick_best_pedagogical_entry(pedagogical_map, lookup_candidates)
+            if honorific_residue_candidates:
+                honorific_peda_entry, honorific_peda_candidate = pick_best_pedagogical_entry(pedagogical_map, honorific_residue_candidates)
+                if honorific_peda_entry:
+                    peda_entry = honorific_peda_entry
+                    peda_candidate = honorific_peda_candidate
+                    strict_level = None
+                    strict_candidate = None
             raw_entry = None
             if not strict_level and not peda_entry and raw_fallback_map:
-                raw_entry, _ = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
+                raw_entry, raw_candidate = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
+            else:
+                raw_candidate = None
+
+            if strict_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, strict_candidate)
+            elif peda_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, peda_candidate)
+            elif raw_candidate:
+                detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
 
             if strict_level:
                 if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches, lookup_candidates):
@@ -1519,7 +2068,11 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                         raw_level, raw_source = raw_entry
                         details[detail_key] = f"{raw_level}@{raw_source}"
                         used_raw_fallback = True
+                        if is_raw_level_harder(raw_level, raw_max_label):
+                            raw_max_label = raw_level
                     else:
+                        if should_skip_unknown_due_to_grammar(detail_key, grammar_matches, lookup_candidates=lookup_candidates, next_token=next_token):
+                            continue
                         details[detail_key] = unknown_vocab_tag(
                             token,
                             detail_key=detail_key,
@@ -1528,16 +2081,18 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                             candidates=lookup_candidates,
                             prev_token=prev_token,
                             next_token=next_token,
+                            bunpro_raw_map=bunpro_raw_map,
                         )
     except Exception as e:
         print(f"Error in pedagogical vocab analysis for '{sentence}': {e}")
 
     details_str = ','.join([f"{k}:{v}" for k, v in details.items()]) if details else '-'
 
+    if raw_max_label is not None:
+        return raw_max_label, details_str
+
     if max_peda == max_strict:
         # No difference: return same level as strict, no details needed
-        if used_raw_fallback:
-            return numeric_to_jlpt(max_strict), details_str
         return numeric_to_jlpt(max_strict), '-'
 
     return numeric_to_jlpt(max_peda), details_str
@@ -1636,6 +2191,15 @@ def process_sentences(
         raw_col='jlpt_level_raw',
         source_name='bunpro-api-raw',
     )
+    # Set of all words known to Bunpro API (including NUNCLASSIFIED ones) for UNC tagging
+    bunpro_api_all_words = set()
+    if bunpro_api_file and os.path.exists(bunpro_api_file):
+        try:
+            _bp_df = pd.read_csv(bunpro_api_file, sep='|', dtype=str).fillna('')
+            if 'word' in _bp_df.columns:
+                bunpro_api_all_words = set(_bp_df['word'].str.strip())
+        except Exception:
+            pass
 
     open_anki_fallback = load_open_anki_jlpt(open_anki_folder)
     pedagogical_map = merge_pedagogical_maps(pedagogical_map, open_anki_fallback)
@@ -1656,6 +2220,10 @@ def process_sentences(
     grammar_patterns = load_grammar_patterns(grammar_file, fallback_file='data/grammar_patterns.csv')
 
     print(f"Loaded grammar patterns: {len(grammar_patterns)}")
+
+    # Build hiragana→kanji normalization map from all vocabulary sources
+    hira_to_kanji = build_hiragana_to_kanji_map(vocab_map, supplemental_map=pedagogical_map)
+    print(f"Built hiragana-kanji map: {len(hira_to_kanji)} entries")
     
     # Read input CSV
     print(f"Reading {input_file}...")
@@ -1720,6 +2288,8 @@ def process_sentences(
             supplemental_map=pedagogical_map,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
+            bunpro_raw_map=bunpro_api_all_words,
+            hira_map=hira_to_kanji,
         )
         peda_level, peda_detail = analyze_vocab_pedagogical(
             analysis_sentence,
@@ -1730,7 +2300,12 @@ def process_sentences(
             common_words=common_words,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
+            bunpro_raw_map=bunpro_api_all_words,
+            hira_map=hira_to_kanji,
         )
+        # Déduplication : ne garder dans peda_detail que ce qui diffère de vocab_detail
+        if peda_detail != '-':
+            peda_detail = diff_details_str(peda_detail, vocab_detail)
         no_kata_level, _ = analyze_vocab_pedagogical(
             analysis_sentence,
             vocab_map,
@@ -1741,6 +2316,8 @@ def process_sentences(
             common_words=common_words,
             raw_fallback_map=bunpro_api_raw_fallback,
             variants_map=variants_map,
+            bunpro_raw_map=bunpro_api_all_words,
+            hira_map=hira_to_kanji,
         )
 
         # Keep pedagogical level unless removing katakana lowers the level.
@@ -1887,4 +2464,7 @@ if __name__ == '__main__':
     
     # Show sample
     print("\nSample of results:")
-    print(result.head(10))
+    try:
+        print(result.head(10).to_string())
+    except UnicodeEncodeError:
+        print(result.head(10).to_string().encode('ascii', errors='replace').decode('ascii'))
