@@ -535,11 +535,7 @@ def clean_sentence_for_analysis(sentence):
     """Remove HTML tags/entities and normalize whitespace before analysis."""
     text = html.unescape(str(sentence))
     text = re.sub(r'<[^>]+>', ' ', text)
-    text = re.sub(
-        r'(?<=[\u3040-\u30ff\u3400-\u9fff々〆ヶ0-9０-９])\s+(?=[\u3040-\u30ff\u3400-\u9fff々〆ヶ0-9０-９])',
-        '',
-        text,
-    )
+    text = text.replace('\u3000', ' ')
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -1286,6 +1282,49 @@ def apply_level_fallback(level, *details_candidates):
     return best_level_from_details(*details_candidates)
 
 
+def extract_vocab_tags_from_details(details_str):
+    """Extract normalized detail tags (N*, PN, CO, KA, KA?, UNC, ?)."""
+    tags = []
+    if not details_str or details_str == '-':
+        return tags
+
+    for part in str(details_str).split(','):
+        piece = part.strip()
+        if not piece or ':' not in piece:
+            continue
+        _key, _sep, raw_value = piece.rpartition(':')
+        value = str(raw_value).strip()
+        if not value:
+            continue
+        normalized = value.split('@', 1)[0].strip().upper()
+        tags.append(normalized)
+    return tags
+
+
+def adjust_nominal_only_level(level, details_str, grammar_level):
+    """Convert PN/CO-only vocab summaries into JLPT levels using grammar/default rules."""
+    tags = extract_vocab_tags_from_details(details_str)
+    if not tags:
+        return level
+
+    grammar_norm = str(grammar_level).strip() if grammar_level is not None else ''
+    has_grammar_level = get_jlpt_level(grammar_norm) > 0
+    unique_tags = set(tags)
+
+    # If only proper nouns were detected in vocab:
+    # - use grammar level when available
+    # - otherwise default to N5
+    if unique_tags == {'PN'}:
+        return grammar_norm if has_grammar_level else 'N5'
+
+    # If detected vocab is only from nominal buckets (PN/CO/KA/KA?),
+    # prefer grammar when available, else default to beginner level N5.
+    if unique_tags.issubset({'PN', 'CO', 'KA', 'KA?'}):
+        return grammar_norm if has_grammar_level else 'N5'
+
+    return level
+
+
 def backfill_level_from_sentence_context(level, grammar_level, kanji_level):
     """When vocab stays unknown, backfill with sentence-level JLPT clues."""
     normalized = str(level).strip() if level is not None else ''
@@ -1319,6 +1358,18 @@ def infer_sentence_special_vocab_level(sentence):
         return 'N5'
 
     if re.fullmatch(r'[0-9０-９一二三四五六七八九十百千万億兆/:+\-=×÷\.．,，]+', compact):
+        return 'N5'
+
+    # Beginner numeric expressions fully written in hiragana.
+    number_hira_pattern = (
+        r'(いち|に|さん|し|よん|ご|ろく|なな|しち|はち|きゅう|く|'
+        r'じゅう|ひゃく|びゃく|ぴゃく|せん|ぜん|まん|おく|ちょう|'
+        r'ぷん|ふん|ご|かん|にち|じ|ぶん)+'
+    )
+    if re.fullmatch(number_hira_pattern, compact):
+        return 'N5'
+
+    if compact in {'え', 'ね', 'おっ', 'みなかった'}:
         return 'N5'
 
     if compact in {'ちゅうううう', 'きたねー', 'はえー', 'よえー'}:
@@ -2517,6 +2568,13 @@ def process_sentences(
         vocab_level = apply_level_fallback(vocab_level, vocab_detail)
         peda_level = apply_level_fallback(peda_level, peda_detail, vocab_detail)
         final_no_kata_level = apply_level_fallback(final_no_kata_level, no_kata_detail, peda_detail, vocab_detail)
+
+        peda_reference_detail = peda_detail if peda_detail and peda_detail != '-' else vocab_detail
+        no_kata_reference_detail = no_kata_detail if no_kata_detail and no_kata_detail != '-' else peda_reference_detail
+
+        vocab_level = adjust_nominal_only_level(vocab_level, vocab_detail, grammar_level)
+        peda_level = adjust_nominal_only_level(peda_level, peda_reference_detail, grammar_level)
+        final_no_kata_level = adjust_nominal_only_level(final_no_kata_level, no_kata_reference_detail, grammar_level)
 
         vocab_level = backfill_level_from_sentence_context(vocab_level, grammar_level, kanji_level)
         peda_level = backfill_level_from_sentence_context(peda_level, grammar_level, kanji_level)
