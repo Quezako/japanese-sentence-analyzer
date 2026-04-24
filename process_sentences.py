@@ -52,6 +52,14 @@ def load_level_map(file_path, key_column):
                     if reading and reading != '*':
                         hira = _kata_to_hira(reading)
                         if hira and hira != key:
+                            try:
+                                reading_tokens = list(tokenizer.tokenize(hira))
+                            except Exception:
+                                reading_tokens = []
+                            if len(reading_tokens) != 1:
+                                continue
+                            if not getattr(reading_tokens[0], 'part_of_speech', '').startswith('名詞'):
+                                continue
                             existing_hira = mapping.get(hira)
                             if existing_hira is None or get_jlpt_level(level) < get_jlpt_level(existing_hira):
                                 mapping[hira] = level
@@ -100,6 +108,14 @@ def load_pedagogical_map(file_path):
                     if reading and reading != '*':
                         hira = _kata_to_hira(reading)
                         if hira and hira != key:
+                            try:
+                                reading_tokens = list(tokenizer.tokenize(hira))
+                            except Exception:
+                                reading_tokens = []
+                            if len(reading_tokens) != 1:
+                                continue
+                            if not getattr(reading_tokens[0], 'part_of_speech', '').startswith('名詞'):
+                                continue
                             existing = mapping.get(hira)
                             if existing is None or get_jlpt_level(level) < get_jlpt_level(existing[0]):
                                 mapping[hira] = (level, source)
@@ -223,6 +239,14 @@ def load_open_anki_jlpt(folder_path):
                 if reading and reading != word and re.search(r'[\u3400-\u9fff々〆ヶ]', word):
                     hira = _kata_to_hira(reading)
                     if hira and hira != word:
+                        try:
+                            reading_tokens = list(tokenizer.tokenize(hira))
+                        except Exception:
+                            reading_tokens = []
+                        if len(reading_tokens) != 1:
+                            continue
+                        if not getattr(reading_tokens[0], 'part_of_speech', '').startswith('名詞'):
+                            continue
                         existing_hira = mapping.get(hira)
                         if existing_hira is None or get_jlpt_level(level) < get_jlpt_level(existing_hira[0]):
                             mapping[hira] = (level, 'open-anki')
@@ -540,10 +564,48 @@ def clean_sentence_for_analysis(sentence):
     return text
 
 
+def _word_tokens_are_grammatical_only(word_tokens):
+    """Return True if all tokens produced by tokenizing a kanji word are purely grammatical
+    (particles, auxiliaries, dependent verbs like する/いる/ある/くる/なる).
+    Used to decide whether the hiragana reading of a word should be excluded from hira_map,
+    because it would be indistinguishable from a grammatical sequence in a running sentence.
+
+    A token is a genuine *content* token (→ return False) when:
+      - major POS is 名詞/形容詞/副詞/連体詞 and sub-POS is NOT 非自立/接尾/数
+      - major POS is 動詞,自立 with a base form that is not a common grammatical helper
+        (する, いる, ある, くる, 来る, なる, もらう, やる, あげる).
+    """
+    _grammatical_verb_bases = {'する', 'いる', 'ある', 'くる', '来る', 'なる', 'もらう', 'やる', 'あげる'}
+
+    for tok in word_tokens:
+        pos  = tok.part_of_speech.split(',')
+        major = pos[0] if pos else ''
+        sub1  = pos[1] if len(pos) > 1 else ''
+
+        if major in {'助詞', '助動詞', '記号', '接続詞', '感動詞', '接頭詞', '接尾詞'}:
+            continue
+        if major in {'名詞', '形容詞', '副詞', '連体詞'} and sub1 not in {'非自立', '接尾', '数'}:
+            return False  # genuine content word
+        if major == '動詞' and sub1 == '自立':
+            base = (tok.base_form or '') if hasattr(tok, 'base_form') else ''
+            if base and base != '*' and base not in _grammatical_verb_bases:
+                return False  # genuine content verb
+        # anything else is grammatical → keep looping
+
+    return True  # only grammatical tokens found
+
+
 def build_hiragana_to_kanji_map(vocab_map, supplemental_map=None):
     """Build a map: hiragana_reading -> kanji_form for all known multi-char kanji words.
     Used to post-normalize hiragana tokens produced by Janome tokenization.
-    Only generates entries where the hiragana reading is pure hiragana (no kanji)."""
+    Only generates entries where the hiragana reading is pure hiragana (no kanji).
+
+    Readings whose *kanji word* tokenizes to purely grammatical tokens (e.g. 指定 → し+て+い
+    = 〜している) are excluded to prevent false-positive vocab matches on grammatical
+    constructions inside sentences.  The check is done on the kanji word tokens (not the
+    hiragana reading string) to avoid Janome mis-tokenizing double-consonant kana sequences
+    like にっき which would otherwise be incorrectly excluded.
+    """
     hira_map = {}
 
     def _kata_to_hira(text):
@@ -570,10 +632,16 @@ def build_hiragana_to_kanji_map(vocab_map, supplemental_map=None):
                 for tok in toks
             )
             # Only map if reading is pure hiragana and differs from word (which has kanji)
-            if reading and reading != word and re.fullmatch(r'[ぁ-ゖー]+', reading) and len(reading) >= 2:
-                # Prefer shorter (simpler) kanji form if collision
-                if reading not in hira_map or len(word) < len(hira_map[reading]):
-                    hira_map[reading] = word
+            if not (reading and reading != word and re.fullmatch(r'[ぁ-ゖー]+', reading) and len(reading) >= 2):
+                continue
+            # Exclude words whose kanji tokenization is entirely grammatical (e.g. 指定 = し+て+い).
+            # We test the kanji tokens (not the hiragana reading) to avoid Janome mis-tokenizing
+            # double-consonant kana sequences such as にっき.
+            if _word_tokens_are_grammatical_only(toks):
+                continue
+            # Prefer shorter (simpler) kanji form if collision
+            if reading not in hira_map or len(word) < len(hira_map[reading]):
+                hira_map[reading] = word
         except Exception:
             pass
 
@@ -616,11 +684,20 @@ def candidate_to_hiragana_key(text):
 
 
 def enrich_candidates_with_hira_map(candidates, hira_map):
-    """Add canonical kanji forms for hiragana and mixed-form candidates via reading lookup."""
+    """Add canonical kanji forms for *pure hiragana* candidates via reading lookup.
+
+    Conservative rule: do NOT enrich mixed candidates (kanji+hiragana, particles+kanji, etc.).
+    This avoids false positives such as `へ行き` -> `へいき` -> `兵器`.
+    """
     if not hira_map or not candidates:
         return candidates
     extra = []
     for cand in candidates:
+        cand_text = str(cand).strip()
+        if not cand_text:
+            continue
+        if not re.fullmatch(r'[ぁ-ゖー]+', cand_text):
+            continue
         reading_key = candidate_to_hiragana_key(cand)
         if reading_key and reading_key in hira_map:
             kanji_form = hira_map[reading_key]
@@ -667,6 +744,12 @@ def get_prev_token_join_candidates(tokens, idx, max_prefix_len=8):
     if not re.fullmatch(r'[ぁ-ゖー]+', current_surface):
         return []
 
+    # Conservative guard: only allow joins when previous token contains kanji or katakana.
+    # This prevents pure-hiragana joins like は+いい -> はいい or まし+た -> ました,
+    # which create many false positives via hira_map (e.g. 廃位 / 真下).
+    if not re.search(r'[\u3400-\u9fff々〆ヶ\u30A0-\u30FF\uFF66-\uFF9F]', prev_surface):
+        return []
+
     candidates = [prev_surface + current_surface]
     if current_base and current_base != '*' and re.fullmatch(r'[ぁ-ゖー]+', current_base):
         candidates.append(prev_surface + current_base)
@@ -710,6 +793,16 @@ def get_prev_kana_sequence_join_candidates(tokens, idx, max_back_tokens=4):
         return []
 
     seq = list(reversed(seq))
+    # Conservative mode: only join when there is an explicit artifact signal
+    # (small kana boundary or standalone prolonged mark token).
+    all_parts = seq + [current_surface]
+    has_artifact_signal = any(
+        (part and (part[0] in SMALL_KANA or part == 'ー'))
+        for part in all_parts
+    )
+    if not has_artifact_signal:
+        return []
+
     candidates = []
     for size in range(1, len(seq) + 1):
         prefix = ''.join(seq[-size:])
@@ -1164,6 +1257,74 @@ def pick_first_raw_fallback_entry(raw_fallback_map, candidates):
     return None, None
 
 
+def pick_hiragana_vs_kanji_easier_level(surface, lookup_candidates, vocab_map, pedagogical_map=None):
+    """For a token written entirely in hiragana, compare hiragana-only vs kanji-containing
+    candidate groups and return the easier JLPT level.
+
+    Rules:
+    - Apply only when token surface is 100% hiragana.
+    - Build two candidate groups:
+      * hiragana-only candidates
+      * candidates containing kanji
+    - Compute best level in each group using strict vocab and (optionally) pedagogical map.
+    - If both groups have a level, return the easier one (tie -> prefer hiragana).
+    - If one group is missing, return (None, None) and let normal flow continue.
+    """
+    if not surface or not re.fullmatch(r'[ぁ-ゖー]+', str(surface)):
+        return None, None
+    if not lookup_candidates:
+        return None, None
+
+    hira_candidates = [
+        cand for cand in lookup_candidates
+        if cand and re.fullmatch(r'[ぁ-ゖー]+', str(cand))
+    ]
+    kanji_candidates = [
+        cand for cand in lookup_candidates
+        if cand and re.search(r'[\u3400-\u9fff々〆ヶ]', str(cand))
+    ]
+
+    if not hira_candidates or not kanji_candidates:
+        return None, None
+
+    def _best_level(candidates):
+        best_level = None
+        best_candidate = None
+
+        strict_level, strict_candidate = pick_best_vocab_level(vocab_map, candidates)
+        if strict_level:
+            best_level = strict_level
+            best_candidate = strict_candidate
+
+        if pedagogical_map:
+            peda_entry, peda_candidate = pick_best_pedagogical_entry(pedagogical_map, candidates)
+            if peda_entry:
+                peda_level = peda_entry[0]
+                if (
+                    best_level is None
+                    or get_jlpt_level(peda_level) < get_jlpt_level(best_level)
+                    or (
+                        get_jlpt_level(peda_level) == get_jlpt_level(best_level)
+                        and peda_candidate
+                        and re.fullmatch(r'[ぁ-ゖー]+', str(peda_candidate))
+                    )
+                ):
+                    best_level = peda_level
+                    best_candidate = peda_candidate
+
+        return best_level, best_candidate
+
+    hira_level, hira_candidate = _best_level(hira_candidates)
+    kanji_level, kanji_candidate = _best_level(kanji_candidates)
+
+    if not hira_level or not kanji_level:
+        return None, None
+
+    if get_jlpt_level(hira_level) <= get_jlpt_level(kanji_level):
+        return hira_level, hira_candidate
+    return kanji_level, kanji_candidate
+
+
 def get_raw_level_priority(raw_label):
     """Parse numeric priority from Bunpro raw labels like NA4, NA10, NE1.
     Higher number = more advanced in Bunpro curriculum (harder, further from JLPT)."""
@@ -1299,6 +1460,52 @@ def extract_vocab_tags_from_details(details_str):
         normalized = value.split('@', 1)[0].strip().upper()
         tags.append(normalized)
     return tags
+
+
+def extract_jlpt_tags_from_details(*details_strs):
+    """Extract JLPT-only tags from one or more detail strings."""
+    tags = []
+    for details_str in details_strs:
+        for tag in extract_vocab_tags_from_details(details_str):
+            if get_jlpt_level(tag) > 0:
+                tags.append(tag)
+    return tags
+
+
+def harmonize_single_hard_outlier(level, *details_strs):
+    """Downgrade a lone N1/N2 outlier when the rest of the sentence strongly supports an easier level.
+
+    This is a decision-aid heuristic for obvious incoherence cases:
+    a single hard vocab hit should not dominate when several independent
+    vocab/grammar clues are all easier.
+    """
+    normalized = str(level).strip() if level is not None else ''
+    current_num = get_jlpt_level(normalized)
+    if current_num < 4:
+        return normalized
+
+    jlpt_tags = extract_jlpt_tags_from_details(*details_strs)
+    if not jlpt_tags:
+        return normalized
+
+    hard_tags = [tag for tag in jlpt_tags if get_jlpt_level(tag) >= 4]
+    supporting_tags = [tag for tag in jlpt_tags if 0 < get_jlpt_level(tag) < 4]
+
+    if len(hard_tags) != 1:
+        return normalized
+    if len(supporting_tags) < 4:
+        return normalized
+
+    hard_num = get_jlpt_level(hard_tags[0])
+    supporting_num = max(get_jlpt_level(tag) for tag in supporting_tags)
+
+    if supporting_num <= 0 or supporting_num >= hard_num:
+        return normalized
+
+    if hard_num - supporting_num < 2:
+        return normalized
+
+    return numeric_to_jlpt(supporting_num)
 
 
 def adjust_nominal_only_level(level, details_str, grammar_level):
@@ -1454,6 +1661,27 @@ def detect_grammar_matches(sentence, grammar_patterns):
     """Return ordered grammar matches as list of (matched_pattern, jlpt_level)."""
     matches = []
     seen = set()
+
+    def _is_hiragana_pattern(text):
+        return bool(text) and bool(re.fullmatch(r'[ぁ-ゖー]+', text))
+
+    def _match_hiragana_with_boundaries(pattern_text, full_text):
+        """Match pure-hiragana grammar patterns only at kana boundaries.
+        Prevents false positives such as そこで detected inside あそこ+で.
+        """
+        if pattern_text not in full_text:
+            return False
+        for m in re.finditer(re.escape(pattern_text), full_text):
+            start = m.start()
+            end = m.end()
+            prev_char = full_text[start - 1] if start > 0 else ''
+            next_char = full_text[end] if end < len(full_text) else ''
+            prev_is_hira = bool(prev_char) and bool(re.fullmatch(r'[ぁ-ゖー]', prev_char))
+            next_is_hira = bool(next_char) and bool(re.fullmatch(r'[ぁ-ゖー]', next_char))
+            if not prev_is_hira and not next_is_hira:
+                return True
+        return False
+
     try:
         for _, row in grammar_patterns.iterrows():
             pattern = str(row['pattern']).strip()
@@ -1474,6 +1702,14 @@ def detect_grammar_matches(sentence, grammar_patterns):
                 if variant == 'が':
                     # Match adversative/clause-final が, not the regular subject marker.
                     matched = bool(re.search(r'が(?=[、。]|$)', sentence))
+                    if matched:
+                        key = (variant, jlpt_level)
+                        if key not in seen:
+                            matches.append(key)
+                            seen.add(key)
+                    continue
+                if _is_hiragana_pattern(variant):
+                    matched = _match_hiragana_with_boundaries(variant, sentence)
                     if matched:
                         key = (variant, jlpt_level)
                         if key not in seen:
@@ -1645,6 +1881,15 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
                 )
                 if not all_hira:
                     continue
+                # Conservative mode: run this hira_map group pass only for likely
+                # tokenization artifacts (small kana boundary or standalone ー token).
+                artifact_in_group = any(
+                    ((t.surface if hasattr(t, 'surface') else '')[:1] in SMALL_KANA)
+                    or ((t.surface if hasattr(t, 'surface') else '') == 'ー')
+                    for t in group
+                )
+                if not artifact_in_group:
+                    continue
                 surfaces = ''.join(t.surface for t in group)
                 # For groups containing long artifact tokens (starting with small kana),
                 # also try using only the prefix of that artifact token that forms a known word
@@ -1674,6 +1919,12 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
                         break
                 if not found_key:
                     continue
+                # Guard: reject groups whose tokens are ALL grammatical (particles, auxiliaries,
+                # dependent verbs).  This prevents し+て+い being matched as 指定 (してい).
+                # At least one token must be a content word (名詞自立, 形容詞自立, 動詞自立 with
+                # a non-helper base, etc.) for the group to be a real lexical word.
+                if _word_tokens_are_grammatical_only(group):
+                    continue
                 kanji_form = hira_map[found_key]
                 strict_level, _ = pick_best_vocab_level(vocab_map, [kanji_form, found_key])
                 peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, [kanji_form, found_key]) if pedagogical_map else (None, None)
@@ -1691,6 +1942,49 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
                 continue
             group = tokens[i:i + size]
 
+            if size == 2:
+                first_pos = group[0].part_of_speech.split(',') if hasattr(group[0], 'part_of_speech') else []
+                second_pos = group[1].part_of_speech.split(',') if hasattr(group[1], 'part_of_speech') else []
+                first_major = first_pos[0] if len(first_pos) > 0 else ''
+                second_major = second_pos[0] if len(second_pos) > 0 else ''
+                second_surface = group[1].surface if hasattr(group[1], 'surface') else ''
+                if first_major == '名詞' and second_major == '助詞' and second_surface == 'の':
+                    continue
+
+            # Conservative guard for all-hiragana groups containing function words.
+            # These groups are a major source of false positives such as:
+            #   は + いい  -> はいい -> 廃位 (N1)
+            #   まし + た   -> ました -> 真下 (N1)
+            # Keep only explicitly declared pedagogical expressions in this branch.
+            all_hira_group = all(
+                bool(re.fullmatch(r'[ぁ-ゖー]+', (t.surface if hasattr(t, 'surface') else '')))
+                for t in group
+            )
+            if all_hira_group:
+                has_function_token = False
+                for t in group:
+                    pos = t.part_of_speech.split(',')
+                    major = pos[0] if len(pos) > 0 else ''
+                    if major in {'助詞', '助動詞', '記号', '接続詞', '接頭詞'}:
+                        has_function_token = True
+                        break
+
+                has_artifact_signal = any(
+                    ((t.surface if hasattr(t, 'surface') else '')[:1] in SMALL_KANA)
+                    or ((t.surface if hasattr(t, 'surface') else '') == 'ー')
+                    for t in group
+                )
+
+                if has_function_token and not has_artifact_signal:
+                    joined_surface = ''.join(t.surface for t in group)
+                    allowed_declared_expression = (
+                        bool(pedagogical_map)
+                        and joined_surface in pedagogical_map
+                        and re.fullmatch(r'[ぁ-ゖー]+', joined_surface)
+                    )
+                    if not allowed_declared_expression:
+                        continue
+
             surfaces = ''.join(t.surface for t in group)
             bases = ''.join(
                 (t.base_form if hasattr(t, 'base_form') and t.base_form and t.base_form != '*' else t.surface)
@@ -1703,26 +1997,9 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
             if size >= 2:
                 candidates.append(''.join(t.surface for t in group[:-1]) + last_base)
 
-            last_surface = last.surface if hasattr(last, 'surface') else ''
-            prefix_base = ''.join(t.surface for t in group[:-1])
-            for end in range(1, min(len(last_surface), 8) + 1):
-                candidates.append(prefix_base + last_surface[:end])
-
-            for j in range(1, len(group)):
-                prev_surface = group[j - 1].surface if hasattr(group[j - 1], 'surface') else ''
-                if not prev_surface:
-                    continue
-                earlier_prefix = ''.join(t.surface for t in group[:j - 1])
-                first_rest = group[j].surface if hasattr(group[j], 'surface') else ''
-                tail_rest = ''.join(t.surface for t in group[j + 1:])
-                rest_surface = first_rest + tail_rest
-                if not rest_surface:
-                    continue
-                for suf_start in range(1, len(prev_surface)):
-                    suffix = prev_surface[suf_start:]
-                    candidates.append(earlier_prefix + suffix + rest_surface)
-                    for end in range(1, min(len(first_rest), 8) + 1):
-                        candidates.append(earlier_prefix + suffix + first_rest[:end] + tail_rest)
+            # Conservative mode: disable aggressive "suffix of previous token" recombination.
+            # This heuristic creates many false positives (e.g. 日本+の -> 本の, etc.).
+            # We prefer under-detection over over-detection for JLPT estimation stability.
 
             candidates = expand_compound_lookup_candidates(candidates, variants_map=None, hira_map=hira_map)
 
@@ -1735,7 +2012,15 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
                 raw_entry, raw_word = pick_first_raw_fallback_entry(raw_fallback_map, candidates)
 
             matched_word = strict_word or peda_word or raw_word
-            if matched_word and len(str(matched_word)) >= 2 and re.search(r'[\u3400-\u9fff々〆ヶ]', str(matched_word)):
+            is_hiragana_expression = (
+                matched_word
+                and pedagogical_map
+                and str(matched_word) in pedagogical_map
+                and re.fullmatch(r'[ぁ-ゖー]+', str(matched_word))
+            )
+            if matched_word and len(str(matched_word)) >= 2 and (
+                re.search(r'[\u3400-\u9fff々〆ヶ]', str(matched_word)) or is_hiragana_expression
+            ):
                 matches[i] = (matched_word, strict_level, peda_entry, raw_entry, set(range(i, i + size)))
                 consumed.update(range(i, i + size))
 
@@ -1869,8 +2154,10 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             if idx in compound_matches:
                 word, strict_level, supplemental_entry, raw_entry, _ = compound_matches[idx]
                 effective_level = strict_level
-                if not effective_level and supplemental_map and supplemental_entry:
-                    effective_level = supplemental_entry[0]
+                if supplemental_map and supplemental_entry:
+                    supp_level = supplemental_entry[0]
+                    if (not effective_level) or (get_jlpt_level(supp_level) < get_jlpt_level(effective_level)):
+                        effective_level = supp_level
 
                 if effective_level:
                     if should_skip_vocab_due_to_grammar(word, effective_level, grammar_matches):
@@ -1939,10 +2226,17 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
 
             # Proper nouns (固有名詞) → tag PN immediately, do not look up in vocab
             if is_proper_noun_token(token):
-                detail_key = surface if surface else base_form
-                if detail_key and is_meaningful_token_text(detail_key):
-                    details[detail_key] = 'PN'
-                continue
+                pn_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+                pn_candidates = list(dict.fromkeys(pn_candidates))
+                pn_candidates = expand_candidates_with_variants(pn_candidates, variants_map)
+                pn_candidates = enrich_candidates_with_hira_map(pn_candidates, hira_map)
+                pn_strict_level, _ = pick_best_vocab_level(vocab_map, pn_candidates)
+                pn_supp_entry, _ = pick_best_pedagogical_entry(supplemental_map, pn_candidates) if supplemental_map else (None, None)
+                if not pn_strict_level and not pn_supp_entry:
+                    detail_key = surface if surface else base_form
+                    if detail_key and is_meaningful_token_text(detail_key):
+                        details[detail_key] = 'PN'
+                    continue
 
             if is_likely_katakana_name_by_context(tokens, idx, has_katakana_proper_noun):
                 detail_key = surface if surface else base_form
@@ -1983,6 +2277,25 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
                     found_level = honorific_supp_entry[0]
                     found_candidate = None
 
+            # For pure-hiragana tokens, compare hiragana form vs kanji-mapped form
+            # and keep the easier level to avoid overestimating difficulty.
+            hira_preferred_level, hira_preferred_candidate = pick_hiragana_vs_kanji_easier_level(
+                surface,
+                lookup_candidates,
+                vocab_map,
+                pedagogical_map=supplemental_map,
+            )
+            if hira_preferred_level:
+                if not found_level or get_jlpt_level(hira_preferred_level) < get_jlpt_level(found_level):
+                    found_level = hira_preferred_level
+                    found_candidate = hira_preferred_candidate
+                elif (
+                    get_jlpt_level(hira_preferred_level) == get_jlpt_level(found_level)
+                    and hira_preferred_candidate
+                    and re.fullmatch(r'[ぁ-ゖー]+', str(hira_preferred_candidate))
+                ):
+                    found_candidate = hira_preferred_candidate
+
             detail_key = base_form if base_form and base_form != '*' else surface
             if not detail_key:
                 continue
@@ -2005,12 +2318,30 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             else:
                 raw_candidate = None
 
-            if found_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, found_candidate)
-            elif supplemental_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, supplemental_candidate)
-            elif raw_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
+            if surface and re.fullmatch(r'[ぁ-ゖー]+', str(surface)):
+                preferred_hira_candidate = None
+                if supplemental_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(supplemental_candidate)):
+                    preferred_hira_candidate = supplemental_candidate
+                elif found_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(found_candidate)):
+                    preferred_hira_candidate = found_candidate
+                elif raw_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(raw_candidate)):
+                    preferred_hira_candidate = raw_candidate
+
+                if preferred_hira_candidate:
+                    detail_key = preferred_hira_candidate
+                elif found_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, found_candidate)
+                elif supplemental_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, supplemental_candidate)
+                elif raw_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
+            else:
+                if found_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, found_candidate)
+                elif supplemental_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, supplemental_candidate)
+                elif raw_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
 
             if found_level:
                 if should_skip_vocab_due_to_grammar(detail_key, found_level, grammar_matches, lookup_candidates):
@@ -2160,10 +2491,17 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
 
             # Proper nouns (固有名詞) → tag PN immediately, do not look up in vocab
             if is_proper_noun_token(token):
-                detail_key = surface if surface else base_form
-                if detail_key and is_meaningful_token_text(detail_key):
-                    details[detail_key] = 'PN'
-                continue
+                pn_candidates = candidate_forms_for_lookup(base_form, surface, reading=reading)
+                pn_candidates = list(dict.fromkeys(pn_candidates))
+                pn_candidates = expand_candidates_with_variants(pn_candidates, variants_map)
+                pn_candidates = enrich_candidates_with_hira_map(pn_candidates, hira_map)
+                pn_strict_level, _ = pick_best_vocab_level(vocab_map, pn_candidates)
+                pn_peda_entry, _ = pick_best_pedagogical_entry(pedagogical_map, pn_candidates) if pedagogical_map else (None, None)
+                if not pn_strict_level and not pn_peda_entry:
+                    detail_key = surface if surface else base_form
+                    if detail_key and is_meaningful_token_text(detail_key):
+                        details[detail_key] = 'PN'
+                    continue
 
             if is_likely_katakana_name_by_context(tokens, idx, has_katakana_proper_noun):
                 detail_key = surface if surface else base_form
@@ -2227,18 +2565,55 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
                     peda_candidate = honorific_peda_candidate
                     strict_level = None
                     strict_candidate = None
+
+            # For pure-hiragana tokens, compare hiragana form vs kanji-mapped form
+            # and keep the easier level to avoid overestimating difficulty.
+            hira_preferred_level, hira_preferred_candidate = pick_hiragana_vs_kanji_easier_level(
+                surface,
+                lookup_candidates,
+                vocab_map,
+                pedagogical_map=pedagogical_map,
+            )
+            if hira_preferred_level:
+                if not strict_level or get_jlpt_level(hira_preferred_level) < get_jlpt_level(strict_level):
+                    strict_level = hira_preferred_level
+                    strict_candidate = hira_preferred_candidate
+                elif (
+                    get_jlpt_level(hira_preferred_level) == get_jlpt_level(strict_level)
+                    and hira_preferred_candidate
+                    and re.fullmatch(r'[ぁ-ゖー]+', str(hira_preferred_candidate))
+                ):
+                    strict_candidate = hira_preferred_candidate
             raw_entry = None
             if not strict_level and not peda_entry and raw_fallback_map:
                 raw_entry, raw_candidate = pick_first_raw_fallback_entry(raw_fallback_map, lookup_candidates)
             else:
                 raw_candidate = None
 
-            if strict_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, strict_candidate)
-            elif peda_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, peda_candidate)
-            elif raw_candidate:
-                detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
+            if surface and re.fullmatch(r'[ぁ-ゖー]+', str(surface)):
+                preferred_hira_candidate = None
+                if peda_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(peda_candidate)):
+                    preferred_hira_candidate = peda_candidate
+                elif strict_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(strict_candidate)):
+                    preferred_hira_candidate = strict_candidate
+                elif raw_candidate and re.fullmatch(r'[ぁ-ゖー]+', str(raw_candidate)):
+                    preferred_hira_candidate = raw_candidate
+
+                if preferred_hira_candidate:
+                    detail_key = preferred_hira_candidate
+                elif strict_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, strict_candidate)
+                elif peda_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, peda_candidate)
+                elif raw_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
+            else:
+                if strict_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, strict_candidate)
+                elif peda_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, peda_candidate)
+                elif raw_candidate:
+                    detail_key = choose_preferred_detail_key(detail_key, raw_candidate)
 
             if strict_level:
                 if should_skip_vocab_due_to_grammar(detail_key, strict_level, grammar_matches, lookup_candidates):
@@ -2579,6 +2954,12 @@ def process_sentences(
         vocab_level = backfill_level_from_sentence_context(vocab_level, grammar_level, kanji_level)
         peda_level = backfill_level_from_sentence_context(peda_level, grammar_level, kanji_level)
         final_no_kata_level = backfill_level_from_sentence_context(final_no_kata_level, grammar_level, kanji_level)
+
+        final_no_kata_level = harmonize_single_hard_outlier(
+            final_no_kata_level,
+            no_kata_reference_detail,
+            grammar_detail,
+        )
 
         sentence_special_level = infer_sentence_special_vocab_level(analysis_sentence)
         if sentence_special_level:
