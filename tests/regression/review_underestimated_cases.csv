@@ -1,0 +1,6 @@
+id;sentence;jlpt_no_katakana;vocab_jlpt_pedagogical;vocab_pedagogical_details;vocab_jlpt_strict;vocab_details;kanji_jlpt;kanji_details;grammar_jlpt;grammar_details;note
+4499;ⓐ「(お)仕事は？」<br>ⓑ「教師です。」;N5;N5;教師:N5@bunpro;N3;仕事:N5,教師:N3;N3;仕:N4,事:N4,教:N4,師:N3;N5;です:N5,お/ご(honorifique):N5
+8009;お父さんに鍵をもらわなくてはならない。;N5;N5;-;N5;お父さん:N5,鍵:N5,もらう:N5;N5;父:N5;-;-
+9103;ここがいいだろう。;N5;N5;-;N5;ここ:N5,いい:N5;-;-;-;-
+9163;ここでサッカーをしたことがありますか。;N5;N5;-;N5;ここ:N5,サッカー:N5,ある:N5;-;-;-;-
+9389;ここは家賃が高いです。;N5;N5;家賃:N5@bunpro;N3;ここ:N5,家賃:N3,高い:N5;N1;家:N4,賃:N1,高:N5;-;-
