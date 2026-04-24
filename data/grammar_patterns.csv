@@ -16,7 +16,7 @@ pattern|jlpt_level|description|pattern_type
 としたら|N3|Si on suppose que|conditional
 べき|N3|Devoir, obligation éthique|auxiliary_verb
 ていく|N3|Continuer à, aller en faisant|auxiliary_verb
-うちに|N3|Pendant que, avant que|expression
+うちに|N4|Pendant que, avant que|expression
 ばならない|N3|Devoir|expression
 そのため|N3|Pour cette raison, c'est pourquoi|particle_conjunction
 により|N3|Par, au moyen de|particle
@@ -28,6 +28,12 @@ pattern|jlpt_level|description|pattern_type
 から|N4|Depuis, parce que|particle
 ので|N4|Parce que, puisque|particle_conjunction
 けれども|N4|Mais, cependant|particle_conjunction
+なにより.?|N1|Par-dessus tout, avant tout|expression
+何より|N1|Par-dessus tout, avant tout|expression
+かとおもったら.?|N2|Alors que je pensais que..., voilà que...|expression
+かと思ったら|N2|Alors que je pensais que..., voilà que...|expression
+ないではいられな[いく]|N1|Ne pas pouvoir s'empêcher de...|expression
+わりに(は)?|N2|Comparativement à, malgré|expression
 けど|N4|Mais (informel)|particle_conjunction
 ながら|N4|Tandis que, tout en|particle_conjunction
 しかし|N4|Mais, cependant|particle_conjunction

@@ -253,7 +253,7 @@ pattern|jlpt_level|source
 とあれば|N1|skies18/jlpt-grammar-dictionary
 といいといい|N1|skies18/jlpt-grammar-dictionary
 といえども|N1|skies18/jlpt-grammar-dictionary
-とは|N1|skies18/jlpt-grammar-dictionary
+とは|N4|manual-solutions
 ともなく|N1|skies18/jlpt-grammar-dictionary
 ともなると|N1|skies18/jlpt-grammar-dictionary
 ながらに|N1|skies18/jlpt-grammar-dictionary
@@ -440,3 +440,6 @@ Vたあと|N5|manual-notes
 といい|N4|manual-notes
 といいね|N4|manual-notes
 ませんでした|N4|manual-solutions
+ないほうがいい|N4|manual-solutions
+んです|N4|manual-solutions
+のです|N4|manual-solutions

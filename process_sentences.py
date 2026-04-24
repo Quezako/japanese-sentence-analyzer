@@ -1,3 +1,7 @@
+# Liste de tokens parasites à ignorer dans le scoring JLPT
+PARASITE_TOKENS = {'間', 'たん', '真下', 'しん'}
+# Particules japonaises de base
+PARTICULES = {'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'も', 'の', 'や'}
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -444,11 +448,63 @@ def is_proper_noun_token(token):
 
 HONORIFIC_SUFFIXES = {'さん', '様', 'さま', 'くん', 'ちゃん'}
 
+HIRAGANA_KANJI_BLOCKLIST = {
+    'どこ': {'何処'},
+    'いる': {'煎る'},
+    'いい': {'伊井', '委員'},
+    'い': {'煎る'},
+    'さいき': {'細工'},
+    'しん': {'寝'},
+    'しんせつ': {'切ない'},
+    'せつ': {'切ない'},
+    'たいせつ': {'切ない'},
+    'ました': {'真下'},
+    'はなした': {'貼る'},
+    'ねる': {'練る'},
+    'とって': {'取って'},
+    'とんだ': {'飛んだ'},
+    'でかける': {'出掛ける'},
+    'はかない': {'儚い'},
+}
+
+TRAILING_PARTICLES = {'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'も', 'の'}
+
 def is_kanji_or_katakana_word(text):
     """Return True if text is composed only of kanji or katakana (typical name form)."""
     if not text:
         return False
     return bool(re.fullmatch(r'[\u4e00-\u9fff々\u30A0-\u30FF\uFF66-\uFF9FA-Za-zＡ-Ｚａ-ｚ]+', text))
+
+
+def filter_lookup_candidates_by_surface(surface_text, candidates):
+    """Filter obvious kana→kanji hallucinations for a given hiragana surface."""
+    if not candidates:
+        return []
+
+    surface = str(surface_text or '').strip()
+    blocked = HIRAGANA_KANJI_BLOCKLIST.get(surface, set())
+    candidate_set = {str(c).strip() for c in candidates if c and str(c).strip()}
+
+    filtered = []
+    for cand in candidates:
+        cand_text = str(cand).strip() if cand is not None else ''
+        if not cand_text:
+            continue
+
+        if surface == 'がい' and cand_text == 'がい':
+            continue
+
+        if blocked and cand_text in blocked:
+            continue
+
+        if re.search(r'[\u3400-\u9fff々〆ヶ]', cand_text) and cand_text[-1] in TRAILING_PARTICLES:
+            stripped = strip_trailing_particle(cand_text)
+            if stripped and stripped in candidate_set:
+                continue
+
+        filtered.append(cand)
+
+    return list(dict.fromkeys(filtered))
 
 
 def unknown_vocab_tag(
@@ -1223,8 +1279,23 @@ def pick_best_vocab_level(vocab_map, candidates):
     """Return easiest level found among candidates in vocab map."""
     best_level = None
     best_candidate = None
+    filtered_candidates = []
     for cand in candidates:
-        level = vocab_map.get(cand)
+        # cand peut être une string ou un dict selon le pipeline, on gère les deux
+        surface = cand['surface'] if isinstance(cand, dict) and 'surface' in cand else cand
+        # Ignore les tokens parasites
+        if surface in PARASITE_TOKENS:
+            continue
+        # Ignore les combinaisons mot+particule (ex: うちに)
+        for p in PARTICULES:
+            if surface.endswith(p) and len(surface) > len(p):
+                root = surface[:-len(p)]
+                if root in vocab_map:
+                    break  # On ignore ce token
+        else:
+            filtered_candidates.append(cand)
+    for cand in filtered_candidates:
+        level = vocab_map.get(cand) if not isinstance(cand, dict) else vocab_map.get(cand.get('surface', ''))
         if not level:
             continue
         if best_level is None or get_jlpt_level(level) < get_jlpt_level(best_level):
@@ -1237,8 +1308,21 @@ def pick_best_pedagogical_entry(pedagogical_map, candidates):
     """Return easiest pedagogical entry found among candidates."""
     best_entry = None
     best_candidate = None
+    filtered_candidates = []
     for cand in candidates:
-        entry = pedagogical_map.get(cand)
+        surface = cand['surface'] if isinstance(cand, dict) and 'surface' in cand else cand
+        if surface in PARASITE_TOKENS:
+            continue
+        for p in PARTICULES:
+            if surface.endswith(p) and len(surface) > len(p):
+                root = surface[:-len(p)]
+                if root in pedagogical_map:
+                    break
+        else:
+            filtered_candidates.append(cand)
+
+    for cand in filtered_candidates:
+        entry = pedagogical_map.get(cand) if not isinstance(cand, dict) else pedagogical_map.get(cand.get('surface', ''))
         if not entry:
             continue
         level, _source = entry
@@ -1443,6 +1527,16 @@ def apply_level_fallback(level, *details_candidates):
     return best_level_from_details(*details_candidates)
 
 
+def merge_sentence_level_with_grammar(level, grammar_level):
+    """Keep the harder level between sentence vocab level and detected grammar level."""
+    level_num = get_jlpt_level(level)
+    grammar_num = get_jlpt_level(grammar_level)
+    merged_num = max(level_num, grammar_num)
+    if merged_num > 0:
+        return numeric_to_jlpt(merged_num)
+    return level
+
+
 def extract_vocab_tags_from_details(details_str):
     """Extract normalized detail tags (N*, PN, CO, KA, KA?, UNC, ?)."""
     tags = []
@@ -1482,6 +1576,18 @@ def harmonize_single_hard_outlier(level, *details_strs):
     normalized = str(level).strip() if level is not None else ''
     current_num = get_jlpt_level(normalized)
     if current_num < 4:
+        return normalized
+
+    strong_grammar_markers = {
+        'ないではいられ',
+        'なにより',
+        '何より',
+        'かとおもったら',
+        'かと思ったら',
+        'わりに',
+    }
+    joined_details = ' '.join(str(part) for part in details_strs if part)
+    if any(marker in joined_details for marker in strong_grammar_markers):
         return normalized
 
     jlpt_tags = extract_jlpt_tags_from_details(*details_strs)
@@ -1702,6 +1808,22 @@ def detect_grammar_matches(sentence, grammar_patterns):
                 if variant == 'が':
                     # Match adversative/clause-final が, not the regular subject marker.
                     matched = bool(re.search(r'が(?=[、。]|$)', sentence))
+                    if matched:
+                        key = (variant, jlpt_level)
+                        if key not in seen:
+                            matches.append(key)
+                            seen.add(key)
+                    continue
+                if variant == 'ないほうがいい':
+                    matched = variant in sentence
+                    if matched:
+                        key = (variant, jlpt_level)
+                        if key not in seen:
+                            matches.append(key)
+                            seen.add(key)
+                    continue
+                if variant == 'ほうがいい':
+                    matched = variant in sentence and 'ないほうがいい' not in sentence
                     if matched:
                         key = (variant, jlpt_level)
                         if key not in seen:
@@ -2002,6 +2124,7 @@ def find_compound_matches(tokens, vocab_map, pedagogical_map=None, raw_fallback_
             # We prefer under-detection over over-detection for JLPT estimation stability.
 
             candidates = expand_compound_lookup_candidates(candidates, variants_map=None, hira_map=hira_map)
+            candidates = filter_lookup_candidates_by_surface(surfaces, candidates)
 
             strict_level, strict_word = pick_best_vocab_level(vocab_map, candidates)
             peda_entry, peda_word = (None, None)
@@ -2254,6 +2377,7 @@ def analyze_vocabulary(sentence, vocab_map, grammar_matches=None, proper_nouns=N
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             lookup_candidates = enrich_candidates_with_hira_map(lookup_candidates, hira_map)
+            lookup_candidates = filter_lookup_candidates_by_surface(surface, lookup_candidates)
             found_level, found_candidate = pick_best_vocab_level(vocab_map, lookup_candidates)
 
             supplemental_entry = None
@@ -2542,6 +2666,7 @@ def analyze_vocab_pedagogical(sentence, vocab_map, pedagogical_map, ignore_katak
             lookup_candidates = list(dict.fromkeys(lookup_candidates))
             lookup_candidates = expand_candidates_with_variants(lookup_candidates, variants_map)
             lookup_candidates = enrich_candidates_with_hira_map(lookup_candidates, hira_map)
+            lookup_candidates = filter_lookup_candidates_by_surface(surface, lookup_candidates)
             strict_level, strict_candidate = pick_best_vocab_level(vocab_map, lookup_candidates)
 
             if honorific_residue_candidates:
@@ -2954,6 +3079,7 @@ def process_sentences(
         vocab_level = backfill_level_from_sentence_context(vocab_level, grammar_level, kanji_level)
         peda_level = backfill_level_from_sentence_context(peda_level, grammar_level, kanji_level)
         final_no_kata_level = backfill_level_from_sentence_context(final_no_kata_level, grammar_level, kanji_level)
+        final_no_kata_level = merge_sentence_level_with_grammar(final_no_kata_level, grammar_level)
 
         final_no_kata_level = harmonize_single_hard_outlier(
             final_no_kata_level,
