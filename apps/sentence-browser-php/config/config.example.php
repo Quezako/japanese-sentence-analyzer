@@ -15,4 +15,9 @@ return [
         'pass' => '',
         'charset' => 'utf8mb4',
     ],
+    'audio' => [
+        // Base URL used for local-audio field (`sounds`) playback/download in the UI.
+        // Keep relative path in local dev, set a full CDN/object-storage URL in production.
+        'local_base_url' => 'audio/',
+    ],
 ];

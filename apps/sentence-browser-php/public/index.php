@@ -5,13 +5,15 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/src/bootstrap.php';
 $config = sb_load_config();
 $appName = $config['app']['name'] ?? 'Sentence Browser';
+$displayAppName = stripos($appName, 'japanese') === false ? ('Japanese ' . $appName) : $appName;
+$localAudioBaseUrl = (string)($config['audio']['local_base_url'] ?? 'audio/');
 ?>
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></title>
+    <title><?= htmlspecialchars($displayAppName, ENT_QUOTES, 'UTF-8') ?></title>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; background: #f4f6fa; font-size: 14px; }
@@ -21,12 +23,41 @@ $appName = $config['app']['name'] ?? 'Sentence Browser';
         .filters-grid { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
         .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
         .filter-group label { font-size: 12px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .4px; }
+        .filter-label-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .filter-clear-btn {
+            border: 1px solid #cfd7e6;
+            background: #fff;
+            color: #6b7280;
+            border-radius: 999px;
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            padding: 0;
+            line-height: 14px;
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .filter-clear-btn:hover { background: #f3f4f6; color: #111827; }
         input[type=text], input[type=number] { padding: 6px 8px; border: 1px solid #c9d2e3; border-radius: 6px; width: 100%; }
         select { padding: 4px 6px; border: 1px solid #c9d2e3; border-radius: 6px; width: 100%; }
         button { padding: 6px 14px; border: 1px solid #c9d2e3; border-radius: 6px; cursor: pointer; background: #f0f3f8; }
         button:hover { background: #e2e8f4; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; flex-wrap: wrap; gap: 8px; }
         .toolbar-left { display: flex; align-items: center; gap: 12px; }
+        .loading-indicator { display: inline-flex; align-items: center; gap: 6px; color: #4b5563; font-size: 12px; }
+        .loading-indicator.hidden { display: none; }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #d1d5db;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         .pagination { display: flex; gap: 8px; align-items: center; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { cursor: pointer; background: #f0f3f8; white-space: nowrap; user-select: none; }
@@ -77,7 +108,48 @@ $appName = $config['app']['name'] ?? 'Sentence Browser';
         .lvl-N2 { background:#fed7aa; color:#9a3412; }
         .lvl-N1 { background:#fce7f3; color:#9d174d; }
         .row-detail { display: none; background: #f9fafb; }
-        .row-detail td { font-size: 12px; color: #555; padding: 4px 8px 8px; }
+        .row-detail td { font-size: 12px; color: #555; padding: 0 8px; }
+        .detail-panel {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transform: translateY(-4px);
+            transition: max-height .24s ease, opacity .2s ease, transform .2s ease, padding .2s ease;
+            padding: 0;
+        }
+        .row-detail.open .detail-panel {
+            max-height: 360px;
+            opacity: 1;
+            transform: translateY(0);
+            padding: 8px 0 10px;
+        }
+        .annotated-sentence {
+            line-height: 1.9;
+            font-size: 15px;
+            color: #111827;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .annotated-sentence .token-vocab {
+            border-radius: 4px;
+            padding: 0 2px;
+            margin: 0 1px;
+        }
+        .token-vocab-N5 { background: #dcfce7; }
+        .token-vocab-N4 { background: #dbeafe; }
+        .token-vocab-N3 { background: #fef9c3; }
+        .token-vocab-N2 { background: #ffedd5; }
+        .token-vocab-N1 { background: #fce7f3; }
+        .kanji-underline {
+            text-decoration-line: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 2px;
+        }
+        .kanji-underline-N5 { text-decoration-color: #16a34a; }
+        .kanji-underline-N4 { text-decoration-color: #2563eb; }
+        .kanji-underline-N3 { text-decoration-color: #ca8a04; }
+        .kanji-underline-N2 { text-decoration-color: #ea580c; }
+        .kanji-underline-N1 { text-decoration-color: #be185d; }
         .detail-grid { display: flex; gap: 20px; flex-wrap: wrap; }
         .detail-item { display: flex; flex-direction: column; gap: 2px; }
         .detail-item strong { color: #333; }
@@ -88,67 +160,66 @@ $appName = $config['app']['name'] ?? 'Sentence Browser';
 </head>
 <body>
 <main class="container">
-    <h1><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></h1>
+    <h1><?= htmlspecialchars($displayAppName, ENT_QUOTES, 'UTF-8') ?></h1>
 
     <div class="card">
         <div class="filters-grid">
             <div class="filter-group" style="min-width:200px;">
-                <label for="q">Japanese search</label>
+                <label for="q" class="filter-label-row"><span>Japanese search</span><button class="filter-clear-btn" type="button" data-clear-target="q" title="Clear Japanese search">×</button></label>
                 <input id="q" type="text" placeholder="Search sentence…">
+                <button id="resetBtn" type="button" style="margin-top:6px; align-self:flex-start; padding:4px 10px; font-size:12px;">✕ Reset filters</button>
             </div>
             <div class="filter-group" style="min-width:200px;">
-                <label for="english_q">English search</label>
+                <label for="english_q" class="filter-label-row"><span>English search</span><button class="filter-clear-btn" type="button" data-clear-target="english_q" title="Clear English search">×</button></label>
                 <input id="english_q" type="text" placeholder="Search translation…">
             </div>
             <div class="filter-group" style="min-width:220px;">
-                <label for="grammar_details_q">Grammar details search</label>
+                <label for="grammar_details_q" class="filter-label-row"><span>Grammar details search</span><button class="filter-clear-btn" type="button" data-clear-target="grammar_details_q" title="Clear grammar details search">×</button></label>
                 <input id="grammar_details_q" type="text" placeholder="Search grammar rules/details…">
             </div>
             <div class="filter-group" style="min-width:66px; max-width:66px;">
-                <label for="char_len_min">Length min</label>
+                <label for="char_len_min" class="filter-label-row"><span>Length min</span><button class="filter-clear-btn" type="button" data-clear-target="char_len_min" title="Clear min length">×</button></label>
                 <input id="char_len_min" type="number" min="0" placeholder="0">
             </div>
             <div class="filter-group" style="min-width:66px; max-width:66px;">
-                <label for="char_len_max">Length max</label>
+                <label for="char_len_max" class="filter-label-row"><span>Length max</span><button class="filter-clear-btn" type="button" data-clear-target="char_len_max" title="Clear max length">×</button></label>
                 <input id="char_len_max" type="number" min="0" placeholder="∞">
             </div>
             <div class="filter-group">
-                <label for="jlpt_no_katakana">Overall level</label>
+                <label for="jlpt_no_katakana" class="filter-label-row"><span>Overall level</span><button class="filter-clear-btn" type="button" data-clear-target="jlpt_no_katakana" title="Clear overall level">×</button></label>
                 <select id="jlpt_no_katakana" multiple size="6"></select>
             </div>
             <div class="filter-group">
-                <label for="vocab_jlpt_pedagogical">Vocab (flexible)</label>
+                <label for="vocab_jlpt_pedagogical" class="filter-label-row"><span>Vocab (flexible)</span><button class="filter-clear-btn" type="button" data-clear-target="vocab_jlpt_pedagogical" title="Clear vocab flexible">×</button></label>
                 <select id="vocab_jlpt_pedagogical" multiple size="6"></select>
             </div>
             <div class="filter-group">
-                <label for="vocab_jlpt_strict">Vocab (strict)</label>
+                <label for="vocab_jlpt_strict" class="filter-label-row"><span>Vocab (strict)</span><button class="filter-clear-btn" type="button" data-clear-target="vocab_jlpt_strict" title="Clear vocab strict">×</button></label>
                 <select id="vocab_jlpt_strict" multiple size="6"></select>
             </div>
             <div class="filter-group" style="min-width:95px;">
-                <label for="grammar_jlpt">Grammar</label>
+                <label for="grammar_jlpt" class="filter-label-row"><span>Grammar</span><button class="filter-clear-btn" type="button" data-clear-target="grammar_jlpt" title="Clear grammar">×</button></label>
                 <select id="grammar_jlpt" multiple size="6"></select>
             </div>
             <div class="filter-group" style="min-width:95px;">
-                <label for="kanji_jlpt">Kanji</label>
+                <label for="kanji_jlpt" class="filter-label-row"><span>Kanji</span><button class="filter-clear-btn" type="button" data-clear-target="kanji_jlpt" title="Clear kanji">×</button></label>
                 <select id="kanji_jlpt" multiple size="6"></select>
             </div>
             <div class="filter-group" style="min-width:95px;">
-                <label for="JLPT_origin">Origin level</label>
+                <label for="JLPT_origin" class="filter-label-row"><span>Origin level</span><button class="filter-clear-btn" type="button" data-clear-target="JLPT_origin" title="Clear origin level">×</button></label>
                 <select id="JLPT_origin" multiple size="6"></select>
             </div>
             <div class="filter-group">
-                <label for="tags">Tags</label>
+                <label for="tags" class="filter-label-row"><span>Tags</span><button class="filter-clear-btn" type="button" data-clear-target="tags" title="Clear tags">×</button></label>
                 <select id="tags" multiple size="6"></select>
             </div>
-        </div>
-        <div style="margin-top:10px;">
-            <button id="resetBtn" type="button">✕ Reset filters</button>
         </div>
     </div>
 
     <div class="toolbar">
         <div class="toolbar-left">
             <span id="meta">Total: 0</span>
+            <span id="loadingIndicator" class="loading-indicator hidden"><span class="spinner"></span>Loading…</span>
             <label style="display:flex;align-items:center;gap:6px;">
                 Rows per page
                 <select id="page-size-select">
@@ -340,8 +411,113 @@ function renderTags(tagStr) {
         .map(t => `<span class="tag-badge">${escHtml(t)}</span>`).join('');
 }
 
+function stripHtml(value) {
+    return String(value ?? '').replace(/<[^>]*>/g, '');
+}
+
+function parseLevelDetails(detailsText) {
+    const map = new Map();
+    if (!detailsText) return map;
+
+    String(detailsText)
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .forEach(part => {
+            const match = part.match(/^(.*?):\s*(N[1-5]|-)\s*$/i);
+            if (!match) return;
+            const term = (match[1] || '').trim();
+            const level = (match[2] || '').toUpperCase();
+            if (!term || !level || level === '-') return;
+            map.set(term, level);
+        });
+
+    return map;
+}
+
+function splitChars(text) {
+    return Array.from(String(text ?? ''));
+}
+
+function isKanjiChar(char) {
+    return /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF々〆〤]/.test(char);
+}
+
+function applyKanjiUnderline(char, kanjiMap, tooltip) {
+    const kanjiLevel = isKanjiChar(char) ? kanjiMap.get(char) : null;
+    if (!kanjiLevel) {
+        return `<span title="${escHtml(tooltip)}">${escHtml(char)}</span>`;
+    }
+    return `<span class="kanji-underline kanji-underline-${escHtml(kanjiLevel)}" title="${escHtml(tooltip)}">${escHtml(char)}</span>`;
+}
+
+function renderAnnotatedSentence(row) {
+    const sentencePlain = stripHtml(row.sentence);
+    if (!sentencePlain) return '';
+
+    const vocabMap = parseLevelDetails(row.vocab_details || row.vocab_pedagogical_details || '');
+    const kanjiMap = parseLevelDetails(row.kanji_details || '');
+    const vocabWords = Array.from(vocabMap.keys()).sort((a, b) => b.length - a.length);
+
+    const out = [];
+    let cursor = 0;
+
+    const buildTooltip = (word, wordLevel, kanjiPairs) => {
+        const lines = [`Vocabulary: ${word} (${wordLevel})`];
+        if (kanjiPairs.length) {
+            lines.push(`Kanji: ${kanjiPairs.join(', ')}`);
+        }
+        return lines.join(' | ');
+    };
+
+    while (cursor < sentencePlain.length) {
+        let matchedWord = null;
+        let matchedLevel = null;
+
+        for (const word of vocabWords) {
+            if (!word) continue;
+            if (sentencePlain.startsWith(word, cursor)) {
+                matchedWord = word;
+                matchedLevel = vocabMap.get(word) || null;
+                break;
+            }
+        }
+
+        if (matchedWord && matchedLevel) {
+            const kanjiBits = [];
+            const chars = splitChars(matchedWord);
+            chars.forEach(ch => {
+                const kl = kanjiMap.get(ch);
+                if (kl) {
+                    kanjiBits.push(`${ch} (${kl})`);
+                }
+            });
+            const tooltip = buildTooltip(matchedWord, matchedLevel, kanjiBits);
+            const renderedChars = chars.map(ch => {
+                return applyKanjiUnderline(ch, kanjiMap, tooltip);
+            }).join('');
+
+            out.push(`<span class="token-vocab token-vocab-${escHtml(matchedLevel)}" title="${escHtml(tooltip)}">${renderedChars}</span>`);
+            cursor += matchedWord.length;
+            continue;
+        }
+
+        const ch = sentencePlain[cursor];
+        const kl = kanjiMap.get(ch);
+        if (kl) {
+            out.push(`<span class="kanji-underline kanji-underline-${escHtml(kl)}" title="${escHtml(`Kanji: ${ch} (${kl})`)}">${escHtml(ch)}</span>`);
+        } else {
+            out.push(escHtml(ch));
+        }
+        cursor += 1;
+    }
+
+    return out.join('');
+}
+
 // ─── Audio ────────────────────────────────────────────────────────────────────
 const ONLINE_AUDIO_BASE = 'https://receptomanijalogi.web.app/audio/';
+const LOCAL_AUDIO_BASE = <?= json_encode($localAudioBaseUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
 function parseSound(sounds) {
     if (!sounds) return [];
@@ -374,6 +550,19 @@ function toOnlineAudioUrl(path) {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
     return ONLINE_AUDIO_BASE + path.replace(/^\/+/, '');
+}
+
+function toLocalAudioUrl(filename) {
+    if (!filename) return '';
+    const safeBase = String(LOCAL_AUDIO_BASE || 'audio/');
+    const baseWithSlash = safeBase.endsWith('/') ? safeBase : (safeBase + '/');
+    return baseWithSlash + encodeURIComponent(filename);
+}
+
+function setLoading(isLoading) {
+    const indicator = document.getElementById('loadingIndicator');
+    if (!indicator) return;
+    indicator.classList.toggle('hidden', !isLoading);
 }
 
 let currentAudio = null;
@@ -484,8 +673,7 @@ function renderRows(rows) {
         };
 
         localSounds.forEach(filename => {
-            const encodedFilename = encodeURIComponent(filename);
-            const localUrl = 'audio/' + encodedFilename;
+            const localUrl = toLocalAudioUrl(filename);
             addAudioControls({
                 playUrl: localUrl,
                 downloadUrl: localUrl,
@@ -506,15 +694,29 @@ function renderRows(rows) {
 
         const trDetail = document.createElement('tr');
         trDetail.className = 'row-detail';
-        trDetail.innerHTML = `<td colspan="12"><div class="detail-grid">
-            <div class="detail-item"><strong>Vocab flexible</strong><span>${escHtml(row.vocab_pedagogical_details)}</span></div>
-            <div class="detail-item"><strong>Vocab strict</strong><span>${escHtml(row.vocab_details)}</span></div>
-            <div class="detail-item"><strong>Kanji details</strong><span>${escHtml(row.kanji_details)}</span></div>
-            <div class="detail-item"><strong>Grammar details</strong><span>${escHtml(row.grammar_details)}</span></div>
+        trDetail.innerHTML = `<td colspan="12"><div class="detail-panel">
+            <div class="annotated-sentence">${renderAnnotatedSentence(row)}</div>
+            <div class="detail-grid">
+                <div class="detail-item"><strong>Vocab flexible</strong><span>${escHtml(row.vocab_pedagogical_details)}</span></div>
+                <div class="detail-item"><strong>Vocab strict</strong><span>${escHtml(row.vocab_details)}</span></div>
+                <div class="detail-item"><strong>Kanji details</strong><span>${escHtml(row.kanji_details)}</span></div>
+                <div class="detail-item"><strong>Grammar details</strong><span>${escHtml(row.grammar_details)}</span></div>
+            </div>
         </div></td>`
 
         tr.addEventListener('click', () => {
-            trDetail.style.display = trDetail.style.display === 'table-row' ? 'none' : 'table-row';
+            const isOpen = trDetail.classList.contains('open');
+            if (isOpen) {
+                trDetail.classList.remove('open');
+                window.setTimeout(() => {
+                    if (!trDetail.classList.contains('open')) {
+                        trDetail.style.display = 'none';
+                    }
+                }, 240);
+            } else {
+                trDetail.style.display = 'table-row';
+                requestAnimationFrame(() => trDetail.classList.add('open'));
+            }
         });
         tbody.appendChild(tr);
         tbody.appendChild(trDetail);
@@ -542,19 +744,56 @@ function syncSortHeaders() {
 
 // ─── Main load ────────────────────────────────────────────────────────────────
 async function loadRows() {
+    setLoading(true);
     pushStateToURL();
-    const response = await fetch('api/sentences.php?' + buildApiParams().toString());
-    const data = await response.json();
-    state.total = data.total || 0;
-    renderRows(data.items || []);
-    updatePagination();
-    syncSortHeaders();
+    try {
+        const response = await fetch('api/sentences.php?' + buildApiParams().toString());
+        const data = await response.json();
+        state.total = data.total || 0;
+        renderRows(data.items || []);
+        updatePagination();
+        syncSortHeaders();
+    } finally {
+        setLoading(false);
+    }
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 function bindEvents() {
     let timer = null;
     const trigger = () => { clearTimeout(timer); timer = setTimeout(() => { state.page = 1; loadRows(); }, 300); };
+
+    const clearFilterTarget = (key) => {
+        if (!key) return;
+
+        if (multiKeys.includes(key)) {
+            state[key] = [];
+            const selectEl = document.getElementById(key);
+            if (selectEl) {
+                Array.from(selectEl.options).forEach(opt => { opt.selected = false; });
+            }
+        } else if (key === 'q' || key === 'english_q' || key === 'grammar_details_q' || key === 'char_len_min' || key === 'char_len_max') {
+            state[key] = '';
+            const inputEl = document.getElementById(key);
+            if (inputEl) {
+                inputEl.value = '';
+            }
+        } else {
+            return;
+        }
+
+        state.page = 1;
+        loadRows();
+    };
+
+    document.querySelectorAll('.filter-clear-btn').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const key = btn.getAttribute('data-clear-target') || '';
+            clearFilterTarget(key);
+        });
+    });
 
     document.getElementById('q').addEventListener('input', e => { state.q = e.target.value.trim(); trigger(); });
     document.getElementById('english_q').addEventListener('input', e => { state.english_q = e.target.value.trim(); trigger(); });

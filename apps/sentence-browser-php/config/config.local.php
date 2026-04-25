@@ -15,4 +15,7 @@ return [
         'pass' => '',
         'charset' => 'utf8mb4',
     ],
+    'audio' => [
+        'local_base_url' => 'audio/',
+    ],
 ];
