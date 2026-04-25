@@ -1144,6 +1144,7 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
     """Build lookup candidates including honorific-prefix and reading variants."""
     candidates = []
     forms = [base_form, surface]
+    reading_form = ''
 
     has_kanji_input = False
     for f in [base_form, surface]:
@@ -1154,7 +1155,8 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
             break
 
     if reading and reading != '*' and has_kanji_input:
-        forms.append(katakana_to_hiragana(str(reading).strip()))
+        reading_form = katakana_to_hiragana(str(reading).strip())
+        forms.append(reading_form)
 
     for form in forms:
         if not form or form == '*':
@@ -1170,7 +1172,7 @@ def candidate_forms_for_lookup(base_form, surface, reading=None):
             candidates.append(form + 'する')
             candidates.append(form[1:] + 'する')
 
-        stripped = strip_trailing_particle(form)
+        stripped = None if (reading_form and form == reading_form) else strip_trailing_particle(form)
         if stripped:
             candidates.append(stripped)
 
