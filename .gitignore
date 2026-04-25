@@ -1,11 +1,8 @@
+.DS_Store
+Thumbs.db
 venv/
 __pycache__/
 *.pyc
-
-# Generated outputs
-output/
-
-# OS/editor
-.DS_Store
-Thumbs.db
 .vscode/
+output/
+apps/sentence-browser-php/public/audio
