@@ -101,6 +101,74 @@ $localAudioBaseUrl = (string)($config['audio']['local_base_url'] ?? 'audio/');
             border-color: #8bb8ff;
             color: #1f5fbf;
         }
+        .inline-action-btn {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #374151;
+            cursor: pointer;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .inline-action-btn:hover { background: #f9fafb; }
+        .translate-btn.loading {
+            opacity: .7;
+            pointer-events: none;
+        }
+        .audio-download-btn.loading {
+            opacity: .7;
+            pointer-events: none;
+        }
+        .action-flash-success {
+            animation: actionFlashSuccess .45s ease;
+        }
+        .action-flash-error {
+            animation: actionFlashError .45s ease;
+        }
+        @keyframes actionFlashSuccess {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); background: #fff; }
+            45% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.32); background: #ecfdf5; }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); background: #fff; }
+        }
+        @keyframes actionFlashError {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); background: #fff; }
+            45% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.28); background: #fef2f2; }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); background: #fff; }
+        }
+        .toast-stack {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #111827;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+            opacity: 0;
+            transform: translateY(8px);
+            animation: toastInOut 2s ease forwards;
+            max-width: 320px;
+        }
+        .toast.error {
+            background: #991b1b;
+        }
+        @keyframes toastInOut {
+            0% { opacity: 0; transform: translateY(8px); }
+            10% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(6px); }
+        }
         .level-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; }
         .lvl-N5 { background:#d1fae5; color:#065f46; }
         .lvl-N4 { background:#dbeafe; color:#1e40af; }
@@ -156,6 +224,26 @@ $localAudioBaseUrl = (string)($config['audio']['local_base_url'] ?? 'audio/');
         tr.expandable:hover { background: #fafbff; cursor: pointer; }
         #page-size-select { padding: 4px 6px; border: 1px solid #c9d2e3; border-radius: 6px; }
         .no-results { text-align: center; padding: 40px; color: #888; }
+        .table-loader-row td {
+            text-align: center;
+            padding: 36px 8px;
+            border-bottom: 1px solid #edf1f7;
+        }
+        .table-loader {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #4b5563;
+            font-size: 13px;
+        }
+        .table-loader-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #d1d5db;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -519,6 +607,12 @@ function renderAnnotatedSentence(row) {
 const ONLINE_AUDIO_BASE = 'https://receptomanijalogi.web.app/audio/';
 const LOCAL_AUDIO_BASE = <?= json_encode($localAudioBaseUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
+function getPreferredTargetLang() {
+    const raw = (navigator.languages && navigator.languages[0]) || navigator.language || 'fr';
+    const code = String(raw).split('-')[0].trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(code) ? code : 'FR';
+}
+
 function parseSound(sounds) {
     if (!sounds) return [];
 
@@ -546,6 +640,17 @@ function parseOnlineSounds(value) {
         .filter(Boolean);
 }
 
+function getFilenameFromUrl(url) {
+    const clean = String(url || '').split('?')[0].split('#')[0];
+    const slashPos = clean.lastIndexOf('/');
+    const candidate = slashPos >= 0 ? clean.slice(slashPos + 1) : clean;
+    try {
+        return decodeURIComponent(candidate) || 'audio';
+    } catch {
+        return candidate || 'audio';
+    }
+}
+
 function toOnlineAudioUrl(path) {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
@@ -559,10 +664,176 @@ function toLocalAudioUrl(filename) {
     return baseWithSlash + encodeURIComponent(filename);
 }
 
+function getForcedDownloadApiUrl(sourceUrl, filenameHint) {
+    const params = new URLSearchParams();
+    params.set('url', String(sourceUrl || ''));
+    if (filenameHint) {
+        params.set('filename', String(filenameHint));
+    }
+    return 'api/audio_download.php?' + params.toString();
+}
+
+function flashAction(button, type = 'success') {
+    if (!button) return;
+    const cls = type === 'error' ? 'action-flash-error' : 'action-flash-success';
+    button.classList.remove('action-flash-success', 'action-flash-error');
+    void button.offsetWidth;
+    button.classList.add(cls);
+    window.setTimeout(() => button.classList.remove(cls), 460);
+}
+
+function getOrCreateToastStack() {
+    let stack = document.getElementById('toastStack');
+    if (stack) return stack;
+
+    stack = document.createElement('div');
+    stack.id = 'toastStack';
+    stack.className = 'toast-stack';
+    document.body.appendChild(stack);
+    return stack;
+}
+
+function showToast(message, type = 'success') {
+    const stack = getOrCreateToastStack();
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type === 'error' ? ' error' : '');
+    toast.textContent = String(message || 'Done');
+    stack.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 2200);
+}
+
+async function forceDownloadAudio(sourceUrl, filenameHint, button = null) {
+    if (!sourceUrl) return;
+    if (button) {
+        button.classList.add('loading');
+    }
+
+    const proxyUrl = getForcedDownloadApiUrl(sourceUrl, filenameHint);
+
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const header = response.headers.get('Content-Disposition') || '';
+        const fileFromHeader = /filename\*=UTF-8''([^;]+)/i.exec(header)?.[1];
+        const resolvedFilename = fileFromHeader ? decodeURIComponent(fileFromHeader) : (filenameHint || getFilenameFromUrl(sourceUrl));
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = resolvedFilename || 'audio';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+        flashAction(button, 'success');
+        showToast('Téléchargement lancé');
+    } catch (error) {
+        flashAction(button, 'error');
+        showToast(`Échec téléchargement: ${String(error?.message || error)}`, 'error');
+    } finally {
+        if (button) {
+            button.classList.remove('loading');
+        }
+    }
+}
+
+async function copyTextToClipboard(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return false;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (_) {
+            // fallback below
+        }
+    }
+
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', 'readonly');
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    el.select();
+    let copied = false;
+    try {
+        copied = !!document.execCommand('copy');
+    } catch (_) {
+        copied = false;
+    }
+    el.remove();
+    return copied;
+}
+
+async function translateTextInCell(button, textSpan) {
+    if (!button || !textSpan) return;
+
+    const sourceText = (textSpan.dataset.originalText || textSpan.textContent || '').trim();
+    if (!sourceText) return;
+
+    button.classList.add('loading');
+    const oldLabel = button.textContent;
+    button.textContent = '…';
+
+    try {
+        const response = await fetch('api/translate.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: sourceText,
+                target_lang: getPreferredTargetLang(),
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data || !data.translated_text) {
+            throw new Error(data?.error || `HTTP ${response.status}`);
+        }
+
+        const translatedText = String(data.translated_text);
+        textSpan.textContent = translatedText;
+
+        const copied = await copyTextToClipboard(translatedText);
+        if (copied) {
+            flashAction(button, 'success');
+            showToast(`Traduit (${data.provider || 'auto'}) + copié`);
+        } else {
+            flashAction(button, 'success');
+            showToast(`Traduit (${data.provider || 'auto'}), copie impossible`, 'error');
+        }
+    } catch (error) {
+        button.title = `Translate failed: ${String(error?.message || error)}`;
+        flashAction(button, 'error');
+        showToast(`Échec traduction: ${String(error?.message || error)}`, 'error');
+    } finally {
+        button.classList.remove('loading');
+        button.textContent = oldLabel;
+    }
+}
+
 function setLoading(isLoading) {
-    const indicator = document.getElementById('loadingIndicator');
-    if (!indicator) return;
-    indicator.classList.toggle('hidden', !isLoading);
+    const tbody = document.getElementById('rows');
+    if (!tbody) return;
+    if (isLoading) {
+        tbody.innerHTML = `
+            <tr class="table-loader-row">
+                <td colspan="12">
+                    <div class="table-loader">
+                        <span class="table-loader-spinner"></span>
+                        <span>Loading sentences…</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        document.getElementById('no-results').style.display = 'none';
+    }
 }
 
 let currentAudio = null;
@@ -628,11 +899,21 @@ function renderRows(rows) {
 
         const tr = document.createElement('tr');
         tr.className = 'expandable';
+        const sentencePlain = stripHtml(row.sentence || '');
+        const englishPlain = stripHtml(row.english || '');
         tr.innerHTML = `
             <td>${escHtml(row.id)}</td>
-            <td class="sentence">${row.sentence ?? ''}</td>
+            <td class="sentence">
+                <span class="sentence-text">${row.sentence ?? ''}</span>
+                <button class="inline-action-btn copy-btn" type="button" data-copy-target="sentence" title="Copy Japanese sentence">⧉</button>
+                <button class="inline-action-btn translate-btn" type="button" data-translate-target="sentence" title="Translate Japanese sentence">🌐</button>
+            </td>
             <td class="audio-cell"></td>
-            <td class="english">${row.english ?? ''}</td>
+            <td class="english">
+                <span class="english-text">${row.english ?? ''}</span>
+                <button class="inline-action-btn copy-btn" type="button" data-copy-target="english" title="Copy English sentence">⧉</button>
+                <button class="inline-action-btn translate-btn" type="button" data-translate-target="english" title="Translate English text">🌐</button>
+            </td>
             <td style="text-align:center;">${escHtml(row.char_len)}</td>
             <td>${levelBadge(row.jlpt_no_katakana)}</td>
             <td>${levelBadge(row.vocab_jlpt_pedagogical)}</td>
@@ -644,6 +925,41 @@ function renderRows(rows) {
 
         // Audio buttons built via DOM to allow stopPropagation
         const audioTd = tr.querySelector('.audio-cell');
+        const sentenceSpan = tr.querySelector('.sentence-text');
+        const englishSpan = tr.querySelector('.english-text');
+        if (sentenceSpan) {
+            sentenceSpan.dataset.originalText = sentencePlain;
+        }
+        if (englishSpan) {
+            englishSpan.dataset.originalText = englishPlain;
+        }
+
+        tr.querySelectorAll('.copy-btn').forEach(copyBtn => {
+            copyBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const target = copyBtn.getAttribute('data-copy-target');
+                const span = target === 'sentence' ? sentenceSpan : englishSpan;
+                const copied = await copyTextToClipboard((span?.dataset.originalText || span?.textContent || '').trim());
+                if (copied) {
+                    flashAction(copyBtn, 'success');
+                    showToast('Texte copié');
+                } else {
+                    flashAction(copyBtn, 'error');
+                    showToast('Copie impossible', 'error');
+                }
+            });
+        });
+
+        tr.querySelectorAll('.translate-btn').forEach(translateBtn => {
+            translateBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const target = translateBtn.getAttribute('data-translate-target');
+                const span = target === 'sentence' ? sentenceSpan : englishSpan;
+                if (!span) return;
+                await translateTextInCell(translateBtn, span);
+            });
+        });
+
         const addAudioControls = ({ playUrl, downloadUrl, title, isOnline }) => {
             const wrap = document.createElement('div');
             wrap.className = 'audio-item';
@@ -657,14 +973,14 @@ function renderRows(rows) {
                 playAudioUrl(playUrl, btn);
             });
 
-            const download = document.createElement('a');
+            const download = document.createElement('button');
             download.className = 'audio-download-btn' + (isOnline ? ' audio-download-btn-online' : '');
-            download.href = downloadUrl;
-            download.target = '_blank';
-            download.rel = 'noopener';
+            download.type = 'button';
             download.textContent = 'DL';
-            download.addEventListener('click', e => {
+            const filenameHint = getFilenameFromUrl(downloadUrl);
+            download.addEventListener('click', async e => {
                 e.stopPropagation();
+                await forceDownloadAudio(downloadUrl, filenameHint, download);
             });
 
             wrap.appendChild(btn);
@@ -748,11 +1064,20 @@ async function loadRows() {
     pushStateToURL();
     try {
         const response = await fetch('api/sentences.php?' + buildApiParams().toString());
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
         const data = await response.json();
         state.total = data.total || 0;
         renderRows(data.items || []);
         updatePagination();
         syncSortHeaders();
+    } catch (error) {
+        state.total = 0;
+        const tbody = document.getElementById('rows');
+        tbody.innerHTML = `<tr class="table-loader-row"><td colspan="12">Failed to load data: ${escHtml(String(error?.message || error))}</td></tr>`;
+        document.getElementById('no-results').style.display = 'none';
+        updatePagination();
     } finally {
         setLoading(false);
     }
