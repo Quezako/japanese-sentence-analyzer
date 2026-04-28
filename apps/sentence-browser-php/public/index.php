@@ -353,6 +353,8 @@ $localAudioBaseUrl = (string)($config['audio']['local_base_url'] ?? 'audio/');
         <span id="pageInfo2">Page 1 / 1</span>
         <button id="nextBtn2" type="button">Next &#x203a;</button>
     </div>
+    <br>
+    Original project by Toni Pravoime : <a href="https://sentencesearch.neocities.org/" target="_blank" rel="noopener">sentencesearch.neocities.org</a><br>
 </main>
 
 <script>
